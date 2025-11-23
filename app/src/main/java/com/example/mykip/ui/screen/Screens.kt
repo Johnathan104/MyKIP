@@ -133,10 +133,7 @@ fun ProfileScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(text = "NIM", fontWeight = FontWeight.Medium)
-                    Text(text = "Nama", fontWeight = FontWeight.Medium)
                     Text(text = "Email", fontWeight = FontWeight.Medium)
-                    Text(text = "Tlp", fontWeight = FontWeight.Medium)
-                    Text(text = "Alamat", fontWeight = FontWeight.Medium)
                 }
 
                 Column(
@@ -149,29 +146,11 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(text = user?.nim ?: "-", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     }
-                    // Nama
-                    Row {
-                        Text(text = ":", fontWeight = FontWeight.Medium)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "Simon", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                    }
                     // Email
                     Row {
                         Text(text = ":", fontWeight = FontWeight.Medium)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "simon@gmail.com", color = Color(0xFF8B5E78), fontWeight = FontWeight.SemiBold)
-                    }
-                    // Tlp
-                    Row {
-                        Text(text = ":", fontWeight = FontWeight.Medium)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "12345678", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                    // Alamat
-                    Row {
-                        Text(text = ":", fontWeight = FontWeight.Medium)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "Jakbar", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text(text = user?.email ?: "-", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
