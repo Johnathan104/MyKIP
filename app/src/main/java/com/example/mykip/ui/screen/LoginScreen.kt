@@ -20,14 +20,18 @@ fun LoginScreen(
 
     val state = viewModel.uiState
 
+    LaunchedEffect(state.isSuccess) {
+        if (state.isSuccess) {
+            onLoginSuccess()
+        }
+    }
+
     Column(
         modifier = Modifier
             .padding(20.dp)
             .fillMaxSize(),
         verticalArrangement = Arrangement.Center
     ) {
-
-        // Header (same style as RegisterScreen)
         Text(
             text = "Login",
             style = MaterialTheme.typography.headlineLarge,
@@ -73,3 +77,4 @@ fun LoginScreen(
         }
     }
 }
+
