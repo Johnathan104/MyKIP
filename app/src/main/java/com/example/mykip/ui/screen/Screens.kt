@@ -2,6 +2,7 @@ package com.example.mykip.ui.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,14 +35,20 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.navigation.NavHostController
 import com.example.mykip.data.Mahasiswa
 import com.example.mykip.R
+import com.example.mykip.data.contohAnak
+import com.example.mykip.data.riwayatUntuk
 import com.example.mykip.ui.viewModel.UserViewModel
 
 
@@ -50,42 +57,103 @@ fun HomeScreen() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
-            .background(Color.LightGray),
-        contentAlignment = Alignment.Center
+            .padding(16.dp),
+        contentAlignment = Alignment.TopCenter
     ) {
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Top
         ) {
+
+            // Logo
             Image(
                 painter = painterResource(id = R.drawable.logo_ukrida),
                 contentDescription = "Logo Ukrida",
                 modifier = Modifier
-                    .size(150.dp) // ukuran logo bisa disesuaikan
-                    .clip(RoundedCornerShape(8.dp)),
+                    .size(140.dp)
+                    .clip(RoundedCornerShape(12.dp)),
                 contentScale = ContentScale.Crop
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
+            // Nama aplikasi
             Text(
-                text = "Tanjung Duren",
-                style = MaterialTheme.typography.bodyLarge.copy(
+                text = "Sistem Manajemen Dana KIP",
+                style = MaterialTheme.typography.headlineSmall.copy(
                     fontWeight = FontWeight.Bold
-                )
+                ),
+                textAlign = TextAlign.Center
             )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Deskripsi singkat aplikasi
+            Text(
+                text = "Aplikasi ini membantu mahasiswa penerima KIP dalam mengelola pencairan dana, memantau penggunaan dana, serta memastikan transparansi dan akuntabilitas.",
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 12.dp)
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // Card fitur
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "Fitur Utama",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    FeatureItem("• Melihat jadwal pencairan dana KIP")
+                    FeatureItem("• Melihat riwayat transaksi dana KIP")
+                    FeatureItem("• Melacak penggunaan dana per semester")
+                    FeatureItem("• Mengunggah bukti penggunaan dana")
+                    FeatureItem("• Notifikasi informasi pencairan terbaru")
+                }
+            }
         }
     }
 }
 
+// Item bullet point
+@Composable
+fun FeatureItem(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.padding(vertical = 4.dp)
+    )
+}
+
+
 @Composable
 fun ProfileScreen(
     viewModel: UserViewModel,
-    onLogout: () -> Unit // callback untuk navigasi setelah logout
+    onLogout: () -> Unit
 ) {
     val state = viewModel.uiState
-    val user = viewModel.loggedInUser // asumsi ViewModel punya properti user yang login
+    val user = viewModel.loggedInUser
+
+    // --- DATA DUMMY (nanti bisa diganti ViewModel) ---
+    val totalSaldo = "Rp 12.500.000"
+    val jumlahAnak = 38
+    val transaksiMasuk = 14
+    val transaksiKeluar = 9
 
     Column(
         modifier = Modifier
@@ -95,7 +163,7 @@ fun ProfileScreen(
         Row(
             verticalAlignment = Alignment.Top
         ) {
-            // Kolom kiri: gambar + teks
+            // FOTO DAN INFO UKRIDA
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.width(150.dp)
@@ -123,9 +191,12 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.width(24.dp))
 
-            // Kolom label & value
+            // DATA USER
             Row(
-                modifier = Modifier.fillMaxWidth().background(Color.LightGray),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.LightGray)
+                    .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(
@@ -140,32 +211,80 @@ fun ProfileScreen(
                     modifier = Modifier.padding(start = 2.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // NIM
                     Row {
                         Text(text = ":", fontWeight = FontWeight.Medium)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = user?.nim ?: "-", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            text = user?.nim ?: "-",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
-                    // Email
+
                     Row {
                         Text(text = ":", fontWeight = FontWeight.Medium)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = user?.email ?: "-", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            text = user?.email ?: "-",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // ========================
+        // PANEL ADMIN DANA KIP
+        // ========================
+        Text(
+            text = "Informasi Dana KIP",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFE9F0FF)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                InfoItem(label = "Total Saldo KIP", value = totalSaldo)
+                InfoItem(label = "Jumlah Anak Terdaftar", value = "$jumlahAnak anak")
+                InfoItem(label = "Transaksi Masuk", value = "$transaksiMasuk transaksi")
+                InfoItem(label = "Transaksi Keluar", value = "$transaksiKeluar transaksi")
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Button(
+                    onClick = {
+                        // TODO: NAVIGASI KE HALAMAN ADMIN
+                        // navController.navigate("manajemenDana")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Kelola Dana KIP", fontWeight = FontWeight.Bold)
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        // Tombol Logout
+        // LOGOUT
         Box(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
             Button(
                 onClick = {
-                    viewModel.logout() // pastikan ada fungsi logout di ViewModel
+                    viewModel.logout()
                     onLogout()
                 }
             ) {
@@ -174,6 +293,19 @@ fun ProfileScreen(
         }
     }
 }
+
+// COMPONENT UNTUK ITEM INFO
+@Composable
+fun InfoItem(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = label, fontWeight = FontWeight.Medium)
+        Text(text = value, fontWeight = FontWeight.SemiBold)
+    }
+}
+
 
 
 @Composable
@@ -184,6 +316,147 @@ fun SearchScreen() {
             color = MaterialTheme.colorScheme.background
         ) {
             DaftarMahasiswa(mhs = contohMhs())
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DaftarAnakScreen(nav: NavHostController) {
+
+    var query by rememberSaveable { mutableStateOf("") }
+    val anakList = contohAnak()
+
+    val filtered = anakList.filter {
+        it.nama.contains(query, ignoreCase = true) ||
+                it.kelas.contains(query, ignoreCase = true)
+    }
+
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("Daftar Anak") }
+            )
+        }
+    ) { inner ->
+        Column(modifier = Modifier.padding(inner)) {
+
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                label = { Text("Cari anak...") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            )
+
+            LazyColumn(
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(filtered) { anak ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                nav.navigate("detailAnak/${anak.id}")
+                            },
+                        elevation = CardDefaults.cardElevation(4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Image(
+                                painter = painterResource(id = anak.photoResId),
+                                contentDescription = anak.nama,
+                                modifier = Modifier
+                                    .size(70.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                            )
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column {
+                                Text(anak.nama, fontWeight = FontWeight.Bold)
+                                Text("Kelas: ${anak.kelas}")
+                                Text("Tersisa: Rp ${anak.danaTersisa}")
+                                Text("Terpakai: Rp ${anak.danaTerpakai}")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DetailAnakScreen(anakId: String, nav: NavHostController) {
+
+    val anak = contohAnak().find { it.id == anakId }
+    val riwayat = riwayatUntuk(anakId)
+
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("Detail Anak") },
+                navigationIcon = {
+                    IconButton(onClick = { nav.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = null)
+                    }
+                }
+            )
+        }
+    ) { inner ->
+
+        if (anak == null) {
+            Text("Data tidak ditemukan", modifier = Modifier.padding(16.dp))
+            return@Scaffold
+        }
+
+        Column(modifier = Modifier.padding(inner).padding(16.dp)) {
+
+            // HEADER
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Image(
+                    painter = painterResource(id = anak.photoResId),
+                    contentDescription = anak.nama,
+                    modifier = Modifier.size(80.dp).clip(RoundedCornerShape(8.dp))
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column {
+                    Text(anak.nama, style = MaterialTheme.typography.titleLarge)
+                    Text("Kelas: ${anak.kelas}")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // DANA
+            Text("Dana Tersisa: Rp ${anak.danaTersisa}")
+            Text("Dana Terpakai: Rp ${anak.danaTerpakai}")
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text("Riwayat Pemakaian Dana", fontWeight = FontWeight.Bold)
+
+            Spacer(Modifier.height(8.dp))
+
+            riwayat.forEach {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    elevation = CardDefaults.cardElevation(2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(it.tanggal, fontWeight = FontWeight.Bold)
+                        Text("Rp ${it.jumlah}")
+                        Text(it.keterangan)
+                    }
+                }
+            }
         }
     }
 }

@@ -10,18 +10,16 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.*
-import com.example.mykip.data.AppDatabase
+import androidx.navigation.navArgument
 import com.example.mykip.data.UserDatabase
 import com.example.mykip.repository.UserRepository
 import com.example.mykip.ui.screen.*
@@ -29,16 +27,12 @@ import com.example.mykip.ui.theme.MyKIPTheme
 import com.example.mykip.ui.viewModel.UserViewModel
 import com.example.mykip.ui.viewModel.UserViewModelFactory
 
-// Sealed class untuk bottom navigation
-sealed class BottomNavScreen(
-    val route: String,
-    val title: String,
-    val icon: ImageVector? = null // icon nullable, Login tidak butuh icon
-) {
-    object Home: BottomNavScreen("home","Home", Icons.Default.Home)
-    object Profile: BottomNavScreen("profile","Profile", Icons.Default.Person)
-    object Search: BottomNavScreen("search","Search", Icons.Default.Search)
-    object Login: BottomNavScreen("login","Login") // Login tanpa icon
+sealed class BottomNavScreen(val route: String, val title: String, val icon: ImageVector? = null) {
+    object Home : BottomNavScreen("home", "Home", Icons.Default.Home)
+    object Profile : BottomNavScreen("profile", "Profile", Icons.Default.Person)
+    object Search : BottomNavScreen("search", "Search", Icons.Default.Search)
+    object Login : BottomNavScreen("login", "Login")
+    object Register : BottomNavScreen("register", "Register")
 }
 
 class MainActivity : ComponentActivity() {
@@ -56,32 +50,40 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MyApp() {
     val navController = rememberNavController()
-    val items = listOf(
+
+    val context = LocalContext.current
+    val database = UserDatabase.getDatabase(context)
+    val viewModel: UserViewModel =
+        viewModel(factory = UserViewModelFactory(UserRepository(database.userDao())))
+
+    val bottomItems = listOf(
         BottomNavScreen.Home,
         BottomNavScreen.Profile,
         BottomNavScreen.Search
     )
 
-    val context = LocalContext.current
-    val database = UserDatabase.getDatabase(context)
-    val userDao = database.userDao()
-    val viewModel: UserViewModel = viewModel(factory = UserViewModelFactory(UserRepository(userDao)))
-
-
     Scaffold(
         bottomBar = {
-            val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-            if (currentRoute != BottomNavScreen.Login.route) {
-                BottomBar(navController = navController, items = items)
+            val route = navController.currentBackStackEntryAsState().value?.destination?.route
+
+            if (
+                route !in listOf(
+                    BottomNavScreen.Login.route,
+                    BottomNavScreen.Register.route
+                ) &&
+                route?.startsWith("detailAnak/") == false
+            ) {
+                BottomBar(navController, bottomItems)
             }
         }
-    ) { innerPadding ->
+    ) { padding ->
+
         NavHost(
             navController = navController,
             startDestination = BottomNavScreen.Login.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(padding)
         ) {
-            // Login Screen
+
             composable(BottomNavScreen.Login.route) {
                 LoginScreen(
                     viewModel = viewModel,
@@ -90,17 +92,24 @@ fun MyApp() {
                             popUpTo(BottomNavScreen.Login.route) { inclusive = true }
                         }
                     },
-                    onNavigateToRegister = { /* register */ }
+                    onNavigateToRegister = {
+                        navController.navigate(BottomNavScreen.Register.route)
+                    }
                 )
             }
 
-            // Home Screen
-            composable(BottomNavScreen.Home.route){
+            composable(BottomNavScreen.Register.route) {
+                RegisterScreen(
+                    viewModel = viewModel,
+                    onNavigateToLogin = { navController.popBackStack() }
+                )
+            }
+
+            composable(BottomNavScreen.Home.route) {
                 HomeScreen()
             }
 
-            // Profile Screen
-            composable(BottomNavScreen.Profile.route){
+            composable(BottomNavScreen.Profile.route) {
                 ProfileScreen(
                     viewModel = viewModel,
                     onLogout = {
@@ -112,9 +121,20 @@ fun MyApp() {
                 )
             }
 
-            // Search Screen
-            composable(BottomNavScreen.Search.route){
-                SearchScreen()
+            composable(BottomNavScreen.Search.route) {
+                DaftarAnakScreen(navController)
+            }
+
+            composable("daftarAnak") {
+                DaftarAnakScreen(navController)
+            }
+
+            composable(
+                "detailAnak/{anakId}",
+                arguments = listOf(navArgument("anakId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val anakId = backStackEntry.arguments?.getString("anakId") ?: ""
+                DetailAnakScreen(anakId = anakId, navController = navController)
             }
         }
     }
@@ -122,8 +142,7 @@ fun MyApp() {
 
 @Composable
 fun BottomBar(navController: NavHostController, items: List<BottomNavScreen>) {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
     NavigationBar {
         items.forEach { screen ->
@@ -132,8 +151,8 @@ fun BottomBar(navController: NavHostController, items: List<BottomNavScreen>) {
                 label = { Text(screen.title) },
                 selected = currentRoute == screen.route,
                 onClick = {
-                    navController.navigate(screen.route){
-                        popUpTo(navController.graph.findStartDestination().id){
+                    navController.navigate(screen.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
                             saveState = true
                         }
                         launchSingleTop = true
@@ -142,13 +161,5 @@ fun BottomBar(navController: NavHostController, items: List<BottomNavScreen>) {
                 }
             )
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun MyAppPreview() {
-    MyKIPTheme {
-        MyApp()
     }
 }
