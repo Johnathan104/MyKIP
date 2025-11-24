@@ -12,22 +12,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.mykip.data.*
+import com.example.mykip.viewmodel.MahasiswaViewModel
+import com.example.mykip.viewmodel.RiwayatDanaViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailAnakScreen(
-    anakId: String,
-    navController: NavController? = null
+    anakNim: String,
+    navController: NavController,
+    mahasiswaViewModel: MahasiswaViewModel,
+    riwayatViewModel: RiwayatDanaViewModel
 ) {
-    val anak = contohAnak().find { it.id == anakId }
-    val riwayat = riwayatUntuk(anakId)
+    var mahasiswa by remember { mutableStateOf<Mahasiswa?>(null) }
+    var riwayatList by remember { mutableStateOf<List<RiwayatDana>>(emptyList()) }
+
+    // Load data from Room
+    LaunchedEffect(anakNim) {
+        mahasiswaViewModel.getByNim(anakNim) { mahasiswa = it }
+        riwayatViewModel.getByNim(anakNim) { riwayatList = it }
+    }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Detail Anak") },
+                title = { Text("Detail Mahasiswa") },
                 navigationIcon = {
-                    IconButton(onClick = { navController?.popBackStack() }) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
                             painterResource(id = com.example.mykip.R.drawable.baseline_arrow_back_24),
                             contentDescription = "Back"
@@ -44,13 +54,13 @@ fun DetailAnakScreen(
                 .padding(16.dp)
         ) {
 
-            if (anak != null) {
+            mahasiswa?.let { mhs ->
 
-                // DATA ANAK
+                // === PROFILE DATA ===
                 Row {
                     Image(
-                        painter = painterResource(id = anak.photoResId),
-                        contentDescription = anak.nama,
+                        painter = painterResource(id = mhs.photoResId),
+                        contentDescription = mhs.nama,
                         modifier = Modifier
                             .size(100.dp)
                             .padding(end = 16.dp)
@@ -58,45 +68,45 @@ fun DetailAnakScreen(
 
                     Column {
                         Text(
-                            anak.nama,
+                            mhs.nama,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
-                        Text("Kelas: ${anak.kelas}")
-                        Spacer(Modifier.height(6.dp))
-                        Text("Dana Tersisa: Rp ${anak.danaTersisa}")
-                        Text("Dana Terpakai: Rp ${anak.danaTerpakai}")
+                        Text("NIM: ${mhs.nim}")
+                        Text("Jurusan: ${mhs.jurusan}")
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(Modifier.height(20.dp))
 
-                // TITLE RIWAYAT
+                // === TITLE ===
                 Text(
                     "Riwayat Penggunaan Dana",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
 
-                // LIST RIWAYAT
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(riwayat) { item ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(4.dp)
-                        ) {
-                            Column(Modifier.padding(12.dp)) {
-                                Text(
-                                    item.tanggal,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text("Rp ${item.jumlah}")
-                                Text(item.keterangan)
+                // === LIST RIWAYAT ===
+                if (riwayatList.isEmpty()) {
+                    Text("Belum ada riwayat dana.", style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(riwayatList) { item ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                elevation = CardDefaults.cardElevation(4.dp)
+                            ) {
+                                Column(Modifier.padding(12.dp)) {
+                                    Text(item.tanggal, fontWeight = FontWeight.Bold)
+                                    Text("Jumlah: Rp ${item.jumlah}")
+                                    Text("Tipe: ${if (item.goingIn) "Pemasukan" else "Pengeluaran"}")
+                                    Text("Keterangan: ${item.keterangan}")
+                                }
                             }
                         }
                     }

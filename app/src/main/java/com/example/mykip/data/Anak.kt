@@ -1,5 +1,8 @@
 package com.example.mykip.data
 
+import androidx.room.Entity
+
+@Entity(tableName = "tbl_anak")
 data class Anak(
     val id: String,
     val nama: String,

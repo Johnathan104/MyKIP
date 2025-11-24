@@ -76,7 +76,9 @@ class UserViewModel(
             val result = repository.register(
                 User(nim = nim, email = email, password = password)
             )
-
+            if(result){
+                loggedInUser = User(nim = nim, email = email, password = password)
+            }
             uiState = if (result) {
                 UiState(
                     isLoading = false,

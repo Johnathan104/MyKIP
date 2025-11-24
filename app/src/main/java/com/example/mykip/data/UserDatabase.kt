@@ -4,25 +4,114 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [User::class], version = 1, exportSchema = false)
+
+import com.example.mykip.R
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
+fun contohMahasiswa(): List<Mahasiswa> = listOf(
+    Mahasiswa(
+        nim = "412022005",
+        nama = "Brino Alfaro",
+        jurusan = "IPA",
+        photoResId = R.drawable.avatar1
+    ),
+    Mahasiswa(
+        nim = "412022006",
+        nama = "Vanda Christie",
+        jurusan = "IPS",
+        photoResId = R.drawable.avatar2
+    )
+)
+fun contohRiwayat(): List<RiwayatDana> = listOf(
+    RiwayatDana(
+        id = 0,
+        nim = "412022005",
+        tanggal = "2025-01-02",
+        goingIn = false,
+        jumlah = 150000,
+        keterangan = "Beli susu"
+    ),
+    RiwayatDana(
+        id = 0,
+        nim = "412022005",
+        tanggal = "2025-01-04",
+        goingIn = true,
+        jumlah = 200000,
+        keterangan = "Pemasukan tambahan"
+    ),
+    RiwayatDana(
+        id = 0,
+        nim = "412022006",
+        tanggal = "2025-01-10",
+        goingIn = false,
+        jumlah = 150000,
+        keterangan = "Pengeluaran kegiatan"
+    )
+)
+@Database(
+    entities = [User::class, RiwayatDana::class, Mahasiswa::class],
+    version = 2,
+    exportSchema = false
+)
 abstract class UserDatabase : RoomDatabase() {
+
     abstract fun userDao(): UserDao
+    abstract fun riwayatDanaDao(): RiwayatDanaDao
+    abstract fun mahasiswaDao(): MahasiswaDao
 
     companion object {
         @Volatile
         private var INSTANCE: UserDatabase? = null
 
         fun getDatabase(context: Context): UserDatabase {
-            return INSTANCE ?: synchronized(lock = this) {
+            return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
                     context.applicationContext,
                     UserDatabase::class.java,
-                    name = "kip_db"
+                    "kip_db"
                 )
                     .fallbackToDestructiveMigration()
-                    .build().also { INSTANCE = it }
+                    .addCallback(DatabaseCallback(context))   // <-- insert dummy data here
+                    .build()
+                    .also { INSTANCE = it }
             }
         }
+
+        private class DatabaseCallback(
+            private val context: Context
+        ) : RoomDatabase.Callback() {
+
+            override fun onCreate(db: SupportSQLiteDatabase) {
+                super.onCreate(db)
+
+                // Run suspend DAO calls inside a coroutine
+                CoroutineScope(Dispatchers.IO).launch {
+                    val database = INSTANCE ?: return@launch
+
+                    val mahasiswaDao = database.mahasiswaDao()
+                    val riwayatDao = database.riwayatDanaDao()
+
+                    // Insert sample mahasiswa
+                    contohMahasiswa().forEach { mahasiswa ->
+                        mahasiswaDao.insertMahasiswa(mahasiswa)
+                    }
+
+                    // Insert sample riwayat dana
+                    contohRiwayat().forEach { riwayat ->
+                        riwayatDao.insertRiwayat(riwayat)
+                    }
+                }
+            }
+        }
+
     }
+}
+
+// simple background thread
+fun ioThread(f: () -> Unit) {
+    Thread(f).start()
 }

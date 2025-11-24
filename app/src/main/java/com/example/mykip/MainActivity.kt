@@ -21,11 +21,17 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.example.mykip.data.UserDatabase
+import com.example.mykip.repository.MahasiswaRepository
+import com.example.mykip.repository.RiwayatDanaRepository
+import com.example.mykip.repository.RiwayatDanaViewModelFactory
 import com.example.mykip.repository.UserRepository
 import com.example.mykip.ui.screen.*
 import com.example.mykip.ui.theme.MyKIPTheme
+import com.example.mykip.ui.viewModel.MahasiswaViewModelFactory
 import com.example.mykip.ui.viewModel.UserViewModel
 import com.example.mykip.ui.viewModel.UserViewModelFactory
+import com.example.mykip.viewmodel.MahasiswaViewModel
+import com.example.mykip.viewmodel.RiwayatDanaViewModel
 
 sealed class BottomNavScreen(val route: String, val title: String, val icon: ImageVector? = null) {
     object Home : BottomNavScreen("home", "Home", Icons.Default.Home)
@@ -55,6 +61,17 @@ fun MyApp() {
     val database = UserDatabase.getDatabase(context)
     val viewModel: UserViewModel =
         viewModel(factory = UserViewModelFactory(UserRepository(database.userDao())))
+    val mahasiswaViewModel: MahasiswaViewModel = viewModel(
+        factory = MahasiswaViewModelFactory(
+            MahasiswaRepository(database.mahasiswaDao())
+        )
+    )
+
+    val riwayatViewModel: RiwayatDanaViewModel = viewModel(
+        factory = RiwayatDanaViewModelFactory(
+            RiwayatDanaRepository(database.riwayatDanaDao())
+        )
+    )
 
     val bottomItems = listOf(
         BottomNavScreen.Home,
@@ -100,7 +117,9 @@ fun MyApp() {
 
             composable(BottomNavScreen.Register.route) {
                 RegisterScreen(
-                    viewModel = viewModel,
+                     viewModel,
+                    mahasiswaViewModel,
+
                     onNavigateToLogin = { navController.popBackStack() }
                 )
             }
@@ -122,11 +141,19 @@ fun MyApp() {
             }
 
             composable(BottomNavScreen.Search.route) {
-                DaftarAnakScreen(navController)
+                DaftarAnakScreen(
+                    navController = navController,
+                    mahasiswaViewModel = mahasiswaViewModel,
+                    riwayatViewModel = riwayatViewModel
+                )
             }
 
             composable("daftarAnak") {
-                DaftarAnakScreen(navController)
+                DaftarAnakScreen(
+                    navController = navController,
+                    mahasiswaViewModel = mahasiswaViewModel,
+                    riwayatViewModel = riwayatViewModel
+                )
             }
 
             composable(
@@ -134,7 +161,7 @@ fun MyApp() {
                 arguments = listOf(navArgument("anakId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val anakId = backStackEntry.arguments?.getString("anakId") ?: ""
-                DetailAnakScreen(anakId = anakId, navController = navController)
+                DetailAnakScreen(anakId , navController, mahasiswaViewModel, riwayatViewModel)
             }
         }
     }

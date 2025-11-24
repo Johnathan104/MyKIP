@@ -50,6 +50,7 @@ import com.example.mykip.R
 import com.example.mykip.data.contohAnak
 import com.example.mykip.data.riwayatUntuk
 import com.example.mykip.ui.viewModel.UserViewModel
+import com.example.mykip.ui.screen.DaftarAnakScreen
 
 
 @Composable
@@ -150,7 +151,7 @@ fun ProfileScreen(
     val user = viewModel.loggedInUser
 
     // --- DATA DUMMY (nanti bisa diganti ViewModel) ---
-    val totalSaldo = "Rp 12.500.000"
+    val totalSaldo = "Rp."+user?.balance.toString()
     val jumlahAnak = 38
     val transaksiMasuk = 14
     val transaksiKeluar = 9
@@ -320,76 +321,76 @@ fun SearchScreen() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DaftarAnakScreen(nav: NavHostController) {
-
-    var query by rememberSaveable { mutableStateOf("") }
-    val anakList = contohAnak()
-
-    val filtered = anakList.filter {
-        it.nama.contains(query, ignoreCase = true) ||
-                it.kelas.contains(query, ignoreCase = true)
-    }
-
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Daftar Anak") }
-            )
-        }
-    ) { inner ->
-        Column(modifier = Modifier.padding(inner)) {
-
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                label = { Text("Cari anak...") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            )
-
-            LazyColumn(
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(filtered) { anak ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                nav.navigate("detailAnak/${anak.id}")
-                            },
-                        elevation = CardDefaults.cardElevation(4.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Image(
-                                painter = painterResource(id = anak.photoResId),
-                                contentDescription = anak.nama,
-                                modifier = Modifier
-                                    .size(70.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                            )
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            Column {
-                                Text(anak.nama, fontWeight = FontWeight.Bold)
-                                Text("Kelas: ${anak.kelas}")
-                                Text("Tersisa: Rp ${anak.danaTersisa}")
-                                Text("Terpakai: Rp ${anak.danaTerpakai}")
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+//@OptIn(ExperimentalMaterial3Api::class)
+//@Composable
+//fun DaftarAnakScreen(nav: NavHostController) {
+//
+//    var query by rememberSaveable { mutableStateOf("") }
+//    val anakList = contohAnak()
+//
+//    val filtered = anakList.filter {
+//        it.nama.contains(query, ignoreCase = true) ||
+//                it.kelas.contains(query, ignoreCase = true)
+//    }
+//
+//    Scaffold(
+//        topBar = {
+//            CenterAlignedTopAppBar(
+//                title = { Text("Daftar Anak") }
+//            )
+//        }
+//    ) { inner ->
+//        Column(modifier = Modifier.padding(inner)) {
+//
+//            OutlinedTextField(
+//                value = query,
+//                onValueChange = { query = it },
+//                label = { Text("Cari anak...") },
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(16.dp)
+//            )
+//
+//            LazyColumn(
+//                contentPadding = PaddingValues(16.dp),
+//                verticalArrangement = Arrangement.spacedBy(12.dp)
+//            ) {
+//                items(filtered) { anak ->
+//                    Card(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .clickable {
+//                                nav.navigate("detailAnak/${anak.id}")
+//                            },
+//                        elevation = CardDefaults.cardElevation(4.dp)
+//                    ) {
+//                        Row(
+//                            modifier = Modifier.padding(12.dp),
+//                            verticalAlignment = Alignment.CenterVertically
+//                        ) {
+//                            Image(
+//                                painter = painterResource(id = anak.photoResId),
+//                                contentDescription = anak.nama,
+//                                modifier = Modifier
+//                                    .size(70.dp)
+//                                    .clip(RoundedCornerShape(8.dp))
+//                            )
+//
+//                            Spacer(modifier = Modifier.width(12.dp))
+//
+//                            Column {
+//                                Text(anak.nama, fontWeight = FontWeight.Bold)
+//                                Text("Kelas: ${anak.kelas}")
+//                                Text("Tersisa: Rp ${anak.danaTersisa}")
+//                                Text("Terpakai: Rp ${anak.danaTerpakai}")
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

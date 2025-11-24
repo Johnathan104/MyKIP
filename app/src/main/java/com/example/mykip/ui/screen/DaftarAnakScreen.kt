@@ -13,28 +13,67 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.mykip.data.Anak
 import com.example.mykip.data.contohAnak
+import com.example.mykip.viewmodel.MahasiswaViewModel
+import com.example.mykip.viewmodel.RiwayatDanaViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+data class AnakUI(
+    val nim: String,
+    val nama: String,
+    val jurusan: String,
+    val danaTersisa: Int,
+    val danaTerpakai: Int,
+    val photoResId: Int
+)@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DaftarAnakScreen(navController: NavController) {
-
-    val anakList = remember { contohAnak() }
+fun DaftarAnakScreen(
+    navController: NavController,
+    mahasiswaViewModel: MahasiswaViewModel,
+    riwayatViewModel: RiwayatDanaViewModel
+) {
     var query by remember { mutableStateOf("") }
+    var anakList by remember { mutableStateOf<List<AnakUI>>(emptyList()) }
 
-    val filtered = remember(query) {
-        val q = query.lowercase()
+    // collect riwayat flow
+    val riwayatList by riwayatViewModel.riwayatList.collectAsState()
+
+    // Load Mahasiswa once
+    LaunchedEffect(Unit) {
+        mahasiswaViewModel.getAll { mahasiswaList ->
+
+            // Load semua riwayat dari DB
+            riwayatViewModel.getAll()
+
+            // setiap kali riwayatList berubah → recompute daftar anak
+            anakList = mahasiswaList.map { mhs ->
+
+                val riwayatMhs = riwayatList.filter { it.nim == mhs.nim }
+
+                val totalMasuk = riwayatMhs.filter { it.goingIn }.sumOf { it.jumlah }
+                val totalKeluar = riwayatMhs.filter { !it.goingIn }.sumOf { it.jumlah }
+
+                AnakUI(
+                    nim = mhs.nim,
+                    nama = mhs.nama,
+                    jurusan = mhs.jurusan,
+                    danaTersisa = totalMasuk - totalKeluar,
+                    danaTerpakai = totalKeluar,
+                    photoResId = mhs.photoResId
+                )
+            }
+        }
+    }
+
+    val filtered = remember(query, anakList) {
         anakList.filter {
+            val q = query.lowercase()
             it.nama.lowercase().contains(q) ||
-                    it.kelas.lowercase().contains(q)
+                    it.jurusan.lowercase().contains(q) ||
+                    it.nim.contains(q)
         }
     }
 
     Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Daftar Anak KIP") }
-            )
-        }
+        topBar = { CenterAlignedTopAppBar(title = { Text("Daftar Mahasiswa KIP") }) }
     ) { innerPadding ->
 
         Column(
@@ -43,18 +82,17 @@ fun DaftarAnakScreen(navController: NavController) {
                 .fillMaxSize()
         ) {
 
-            // Search Box
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                label = { Text("Cari anak...") },
+                label = { Text("Cari mahasiswa...") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
             )
 
             Text(
-                text = "Menampilkan ${filtered.size} anak",
+                text = "Menampilkan ${filtered.size} mahasiswa",
                 modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
             )
 
@@ -63,8 +101,8 @@ fun DaftarAnakScreen(navController: NavController) {
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(filtered) { anak ->
-                    CardAnak(anak) {
-                        navController.navigate("detailAnak/${anak.id}")
+                    CardAnakUI(anak) {
+                        navController.navigate("detailAnak/${anak.nim}")
                     }
                 }
             }
@@ -72,8 +110,9 @@ fun DaftarAnakScreen(navController: NavController) {
     }
 }
 
+
 @Composable
-fun CardAnak(anak: Anak, onClick: () -> Unit) {
+fun CardAnakUI(anak: AnakUI, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -81,9 +120,7 @@ fun CardAnak(anak: Anak, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(6.dp)
     ) {
 
-        Row(
-            modifier = Modifier.padding(12.dp)
-        ) {
+        Row(modifier = Modifier.padding(12.dp)) {
 
             Image(
                 painter = painterResource(id = anak.photoResId),
@@ -93,7 +130,7 @@ fun CardAnak(anak: Anak, onClick: () -> Unit) {
 
             Column(modifier = Modifier.padding(start = 16.dp)) {
                 Text(anak.nama, style = MaterialTheme.typography.titleMedium)
-                Text("Kelas: ${anak.kelas}")
+                Text("Jurusan: ${anak.jurusan}")
                 Text("Dana Tersisa: Rp ${anak.danaTersisa}")
                 Text("Dana Terpakai: Rp ${anak.danaTerpakai}")
             }
