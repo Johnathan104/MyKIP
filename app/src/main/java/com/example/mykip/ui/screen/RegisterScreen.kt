@@ -111,7 +111,7 @@ fun RegisterScreen(
             onValueChange = { password = it },
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
-
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password) ,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(16.dp))

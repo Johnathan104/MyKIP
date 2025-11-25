@@ -8,40 +8,53 @@ import com.example.mykip.repository.RiwayatDanaRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class RiwayatDanaViewModel(
     private val repository: RiwayatDanaRepository
 ) : ViewModel() {
-
+    fun getTodayDate(): String {
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        return sdf.format(Date())
+    }
     private val _riwayatList = MutableStateFlow<List<RiwayatDana>>(emptyList())
     val riwayatList: StateFlow<List<RiwayatDana>> = _riwayatList
 
-    // 🔹 Load ALL riwayat (untuk daftar anak, dashboard admin, dll)
     fun getAll() {
         viewModelScope.launch {
             _riwayatList.value = repository.get()
         }
     }
 
-    fun getByNim(nim:String, onResult: (List<RiwayatDana>,) -> Unit,  ) {
+    fun getByNim(nim: String, onResult: (List<RiwayatDana>) -> Unit) {
         viewModelScope.launch {
             onResult(repository.getByNim(nim))
         }
     }
 
-    // 🔹 Insert + refresh list
-    fun insert(riwayatDana: RiwayatDana) {
+    fun insertRiwayat(nim: String, jumlah: Int, masuk: Boolean, keterangan: String) {
         viewModelScope.launch {
-            repository.insert(riwayatDana)
-            getAll()   // refresh setelah insert
+            repository.insert(
+                RiwayatDana(
+                    nim = nim,
+                    tanggal = getTodayDate(),
+                    goingIn = masuk,
+                    jumlah = jumlah,
+                    keterangan = keterangan
+                )
+            )
+            getAll()
         }
     }
 
-    // 🔹 Delete + refresh list
+
+
     fun delete(riwayatDana: RiwayatDana) {
         viewModelScope.launch {
             repository.delete(riwayatDana)
-            getAll()   // refresh setelah delete
+            getAll()
         }
     }
 }

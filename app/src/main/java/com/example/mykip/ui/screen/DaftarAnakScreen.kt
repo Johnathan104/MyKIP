@@ -12,7 +12,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.mykip.data.Anak
+import com.example.mykip.data.User
 import com.example.mykip.data.contohAnak
+import com.example.mykip.repository.UserRepository
+import com.example.mykip.ui.viewModel.UserViewModel
 import com.example.mykip.viewmodel.MahasiswaViewModel
 import com.example.mykip.viewmodel.RiwayatDanaViewModel
 
@@ -27,35 +30,51 @@ data class AnakUI(
 @Composable
 fun DaftarAnakScreen(
     navController: NavController,
+    userViewModel: UserViewModel,
     mahasiswaViewModel: MahasiswaViewModel,
     riwayatViewModel: RiwayatDanaViewModel
 ) {
     var query by remember { mutableStateOf("") }
+
+    // State holders
     var anakList by remember { mutableStateOf<List<AnakUI>>(emptyList()) }
+    var mahasiswaList by remember { mutableStateOf(emptyList<com.example.mykip.data.Mahasiswa>()) }
+    var userList by remember { mutableStateOf(emptyList<User>()) }
 
     // collect riwayat flow
     val riwayatList by riwayatViewModel.riwayatList.collectAsState()
 
-    // Load Mahasiswa once
+    // Load Mahasiswa and Users once
     LaunchedEffect(Unit) {
-        mahasiswaViewModel.getAll { mahasiswaList ->
+        // Load all users
+        userViewModel.getAllUsers { users ->
+            userList = users
+        }
 
-            // Load semua riwayat dari DB
+        // Load all mahasiswa
+        mahasiswaViewModel.getAll { mhsList ->
+            mahasiswaList = mhsList
+
+            // Trigger riwayat loading
             riwayatViewModel.getAll()
+        }
+    }
 
-            // setiap kali riwayatList berubah → recompute daftar anak
+    // Recompute anakList whenever mahasiswaList, userList, or riwayatList changes
+    LaunchedEffect(mahasiswaList, userList, riwayatList) {
+        if (mahasiswaList.isNotEmpty() && userList.isNotEmpty() && riwayatList.isNotEmpty()) {
             anakList = mahasiswaList.map { mhs ->
+                val tiedUser = userList.find { it.nim == mhs.nim }
+                val totalMasuk = tiedUser?.balance ?: 0
 
                 val riwayatMhs = riwayatList.filter { it.nim == mhs.nim }
-
-                val totalMasuk = riwayatMhs.filter { it.goingIn }.sumOf { it.jumlah }
                 val totalKeluar = riwayatMhs.filter { !it.goingIn }.sumOf { it.jumlah }
 
                 AnakUI(
                     nim = mhs.nim,
                     nama = mhs.nama,
                     jurusan = mhs.jurusan,
-                    danaTersisa = totalMasuk - totalKeluar,
+                    danaTersisa = totalMasuk,
                     danaTerpakai = totalKeluar,
                     photoResId = mhs.photoResId
                 )
@@ -63,6 +82,7 @@ fun DaftarAnakScreen(
         }
     }
 
+    // Filtered list based on query
     val filtered = remember(query, anakList) {
         anakList.filter {
             val q = query.lowercase()
@@ -72,16 +92,15 @@ fun DaftarAnakScreen(
         }
     }
 
+    // UI
     Scaffold(
         topBar = { CenterAlignedTopAppBar(title = { Text("Daftar Mahasiswa KIP") }) }
     ) { innerPadding ->
-
         Column(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
         ) {
-
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
@@ -110,7 +129,6 @@ fun DaftarAnakScreen(
     }
 }
 
-
 @Composable
 fun CardAnakUI(anak: AnakUI, onClick: () -> Unit) {
     Card(
@@ -119,15 +137,12 @@ fun CardAnakUI(anak: AnakUI, onClick: () -> Unit) {
             .clickable { onClick() },
         elevation = CardDefaults.cardElevation(6.dp)
     ) {
-
         Row(modifier = Modifier.padding(12.dp)) {
-
             Image(
                 painter = painterResource(id = anak.photoResId),
                 contentDescription = anak.nama,
                 modifier = Modifier.size(70.dp)
             )
-
             Column(modifier = Modifier.padding(start = 16.dp)) {
                 Text(anak.nama, style = MaterialTheme.typography.titleMedium)
                 Text("Jurusan: ${anak.jurusan}")

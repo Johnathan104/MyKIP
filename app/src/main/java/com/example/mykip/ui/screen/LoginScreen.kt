@@ -1,9 +1,12 @@
 package com.example.mykip.ui.screen
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.mykip.ui.viewModel.UserViewModel
@@ -52,6 +55,8 @@ fun LoginScreen(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password) ,
             label = { Text("Password") },
             modifier = Modifier.fillMaxWidth()
         )

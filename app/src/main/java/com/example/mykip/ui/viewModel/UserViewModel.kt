@@ -5,8 +5,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.mykip.data.RiwayatDana
 import com.example.mykip.data.User
 import com.example.mykip.repository.UserRepository
+import com.example.mykip.viewmodel.RiwayatDanaViewModel
 import kotlinx.coroutines.launch
 
 
@@ -25,7 +27,21 @@ class UserViewModel(
     fun resetState() {
         uiState = UiState()
     }
-
+    fun loadUser(nim: String) {
+        viewModelScope.launch {
+            loggedInUser = repository.getUserByNim(nim)
+        }
+    }
+    fun getByNim(nim: String, onResult: (User?) -> Unit) {
+        viewModelScope.launch {
+            onResult(repository.getUserByNim(nim))
+        }
+    }
+    fun getAllUsers(onResult: (List<User>) -> Unit){
+        viewModelScope.launch {
+            onResult(repository.getAllUsers())
+        }
+    }
     fun login(nim: String, password: String) {
         // Validasi input
         if (nim.isBlank() || password.isBlank()) {
@@ -56,6 +72,68 @@ class UserViewModel(
                     message = "Login failed: NIM atau password salah"
                 )
             }
+        }
+    }
+    fun penyetoran(
+        nim: String,
+        jumlah: Int,
+        keterangan: String,
+        riwayatViewModel: RiwayatDanaViewModel
+    ) {
+        viewModelScope.launch {
+            val user = repository.getUserByNim(nim) ?: return@launch
+
+            val updatedBalance = user.balance + jumlah
+            val flupdatedBalance = updatedBalance.toFloat()
+            repository.updateBalance(nim, updatedBalance)
+
+            riwayatViewModel.insertRiwayat(
+                nim = nim,
+                jumlah = jumlah,
+                masuk = true,
+                keterangan = keterangan
+            )
+
+            loadUser(nim) // refresh state
+        }
+    }
+    fun penarikan(
+        nim: String,
+        jumlah: Int,
+        keterangan: String,
+        riwayatViewModel: RiwayatDanaViewModel,
+        onError: (String?) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val user = repository.getUserByNim(nim) ?: return@launch
+            uiState = UiState(
+                isLoading = true,
+                isSuccess = false,
+            )
+            if (user.balance < jumlah) {
+                uiState = UiState(
+                    isLoading = false,
+                    isSuccess = false,
+                    message = "Dana tidak mencukupi untuk penarikan"
+                )
+                return@launch
+            }
+
+            val updatedBalance = user.balance - jumlah
+            repository.updateBalance(nim, updatedBalance)
+
+            riwayatViewModel.insertRiwayat(
+                nim = nim,
+                jumlah = jumlah,
+                masuk = false,
+                keterangan = keterangan
+            )
+            uiState = UiState(
+                isLoading = false,
+                isSuccess = true,
+                message = "Berhasil melakukan penarikan"
+            )
+            loadUser(nim) // refresh UI
         }
     }
 

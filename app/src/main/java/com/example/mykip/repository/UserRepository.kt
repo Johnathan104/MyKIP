@@ -19,6 +19,8 @@ class UserRepository(
     suspend fun login(nim: String, password: String) = userDao.login(nim, password)
     suspend fun getAllUsers() = userDao.getAllUsers()
     suspend fun updateUser(user: User) = userDao.updateUser(user)
+    suspend fun  getUserByNim(nim: String) = userDao.getUserByNim(nim)
+    suspend fun updateBalance(nim: String, balance: Int) = userDao.updateBalance(nim, balance)
     suspend fun deleteUser(user: User) = userDao.deleteUser(user)
 }
 

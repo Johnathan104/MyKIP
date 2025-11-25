@@ -9,7 +9,7 @@ data class User(
     val nim: String,
     val email: String,
     val password: String,
-    val balance: Float = 0.00f,
+    val balance: Int = 0,
     val isAdmin: Boolean = false,
 )
 

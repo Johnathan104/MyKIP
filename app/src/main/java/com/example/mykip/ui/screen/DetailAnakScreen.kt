@@ -6,12 +6,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.mykip.data.*
+import com.example.mykip.ui.viewModel.UserViewModel
 import com.example.mykip.viewmodel.MahasiswaViewModel
 import com.example.mykip.viewmodel.RiwayatDanaViewModel
 
@@ -20,11 +22,13 @@ import com.example.mykip.viewmodel.RiwayatDanaViewModel
 fun DetailAnakScreen(
     anakNim: String,
     navController: NavController,
+    userViewModel: UserViewModel,
     mahasiswaViewModel: MahasiswaViewModel,
     riwayatViewModel: RiwayatDanaViewModel
 ) {
     var mahasiswa by remember { mutableStateOf<Mahasiswa?>(null) }
     var riwayatList by remember { mutableStateOf<List<RiwayatDana>>(emptyList()) }
+    var showWithdrawDialouge by remember {mutableStateOf(false)}
 
     // Load data from Room
     LaunchedEffect(anakNim) {
@@ -35,7 +39,7 @@ fun DetailAnakScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Detail Mahasiswa") },
+                title = { Text("Detail Mahasiswa (Admin View)") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
@@ -85,7 +89,12 @@ fun DetailAnakScreen(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-
+                Button(
+                    onClick = { showWithdrawDialouge = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Beri Dana", fontWeight = FontWeight.Bold)
+                }
                 Spacer(Modifier.height(12.dp))
 
                 // === LIST RIWAYAT ===
@@ -97,21 +106,66 @@ fun DetailAnakScreen(
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(riwayatList) { item ->
+
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 elevation = CardDefaults.cardElevation(4.dp)
                             ) {
-                                Column(Modifier.padding(12.dp)) {
-                                    Text(item.tanggal, fontWeight = FontWeight.Bold)
-                                    Text("Jumlah: Rp ${item.jumlah}")
-                                    Text("Tipe: ${if (item.goingIn) "Pemasukan" else "Pengeluaran"}")
-                                    Text("Keterangan: ${item.keterangan}")
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(item.tanggal, fontWeight = FontWeight.Bold)
+                                        Text("Jumlah: Rp ${item.jumlah}")
+                                        Text("Tipe: ${if (item.goingIn) "Pemasukan" else "Pengeluaran"}")
+                                        Text("Keterangan: ${item.keterangan}")
+                                    }
+
+                                    // ======== DELETE BUTTON ========
+                                    Button(
+                                        onClick = {
+                                            riwayatViewModel.delete(item)
+
+                                            // Remove from local UI list
+                                            riwayatList = riwayatList.filter { it.id != item.id }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.error
+                                        ),
+                                        modifier = Modifier
+                                            .padding(start = 8.dp)
+                                            .align(Alignment.CenterVertically)
+                                    ) {
+                                        Text("Hapus")
+                                    }
                                 }
                             }
                         }
                     }
+
                 }
             }
         }
+
     }
+    if (showWithdrawDialouge) {
+        DepositDialog(
+            onDismiss = { showWithdrawDialouge = false },
+            onSubmit = { jumlah, keterangan ->
+                userViewModel.penyetoran(
+                    nim = anakNim,
+                    jumlah = jumlah,
+                    keterangan = keterangan,
+                    riwayatViewModel = riwayatViewModel
+                )
+                showWithdrawDialouge = false
+            }
+        )
+    }
+
 }

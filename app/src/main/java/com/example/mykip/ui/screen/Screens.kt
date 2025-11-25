@@ -44,7 +44,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import com.example.mykip.data.Mahasiswa
 import com.example.mykip.R
 import com.example.mykip.data.contohAnak
@@ -145,11 +147,11 @@ fun FeatureItem(text: String) {
 @Composable
 fun ProfileScreen(
     viewModel: UserViewModel,
+    navController: NavController,
     onLogout: () -> Unit
 ) {
     val state = viewModel.uiState
     val user = viewModel.loggedInUser
-
     // --- DATA DUMMY (nanti bisa diganti ViewModel) ---
     val totalSaldo = "Rp."+user?.balance.toString()
     val jumlahAnak = 38
@@ -267,7 +269,7 @@ fun ProfileScreen(
                 Button(
                     onClick = {
                         // TODO: NAVIGASI KE HALAMAN ADMIN
-                        // navController.navigate("manajemenDana")
+                        navController.navigate("kelolaDana")
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {

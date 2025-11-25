@@ -26,4 +26,9 @@ interface UserDao {
 
     @Delete
     suspend fun deleteUser(user: User)
+    @Query("SELECT * FROM tbl_users WHERE nim = :nim LIMIT 1")
+    suspend fun getUserByNim(nim: String): User?
+
+    @Query("UPDATE tbl_users SET balance = :balance WHERE nim = :nim")
+    suspend fun updateBalance(nim: String, balance: Int)
 }

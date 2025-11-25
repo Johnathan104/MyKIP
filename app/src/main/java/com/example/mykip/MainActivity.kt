@@ -32,6 +32,7 @@ import com.example.mykip.ui.viewModel.UserViewModel
 import com.example.mykip.ui.viewModel.UserViewModelFactory
 import com.example.mykip.viewmodel.MahasiswaViewModel
 import com.example.mykip.viewmodel.RiwayatDanaViewModel
+import com.example.mykip.ui.screen.KelolaDanaScreen
 
 sealed class BottomNavScreen(val route: String, val title: String, val icon: ImageVector? = null) {
     object Home : BottomNavScreen("home", "Home", Icons.Default.Home)
@@ -131,6 +132,7 @@ fun MyApp() {
             composable(BottomNavScreen.Profile.route) {
                 ProfileScreen(
                     viewModel = viewModel,
+                    navController,
                     onLogout = {
                         viewModel.logout()
                         navController.navigate(BottomNavScreen.Login.route) {
@@ -143,6 +145,7 @@ fun MyApp() {
             composable(BottomNavScreen.Search.route) {
                 DaftarAnakScreen(
                     navController = navController,
+                    userViewModel = viewModel,
                     mahasiswaViewModel = mahasiswaViewModel,
                     riwayatViewModel = riwayatViewModel
                 )
@@ -151,17 +154,25 @@ fun MyApp() {
             composable("daftarAnak") {
                 DaftarAnakScreen(
                     navController = navController,
+                    userViewModel = viewModel,
                     mahasiswaViewModel = mahasiswaViewModel,
                     riwayatViewModel = riwayatViewModel
                 )
             }
+            composable("kelolaDana"){
+                KelolaDanaScreen(
+                     viewModel,
+                    riwayatViewModel,
+                    navController
+                )
 
+            }
             composable(
                 "detailAnak/{anakId}",
                 arguments = listOf(navArgument("anakId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val anakId = backStackEntry.arguments?.getString("anakId") ?: ""
-                DetailAnakScreen(anakId , navController, mahasiswaViewModel, riwayatViewModel)
+                DetailAnakScreen(anakId , navController,userViewModel = viewModel, mahasiswaViewModel, riwayatViewModel)
             }
         }
     }

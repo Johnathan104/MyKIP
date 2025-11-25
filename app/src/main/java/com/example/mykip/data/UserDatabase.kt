@@ -54,7 +54,7 @@ fun contohRiwayat(): List<RiwayatDana> = listOf(
 )
 @Database(
     entities = [User::class, RiwayatDana::class, Mahasiswa::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class UserDatabase : RoomDatabase() {
