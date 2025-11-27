@@ -16,6 +16,9 @@ import com.example.mykip.data.*
 import com.example.mykip.ui.viewModel.UserViewModel
 import com.example.mykip.viewmodel.MahasiswaViewModel
 import com.example.mykip.viewmodel.RiwayatDanaViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,6 +29,10 @@ fun DetailAnakScreen(
     mahasiswaViewModel: MahasiswaViewModel,
     riwayatViewModel: RiwayatDanaViewModel
 ) {
+    fun getTodayDate(): String {
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        return sdf.format(Date())
+    }
     var mahasiswa by remember { mutableStateOf<Mahasiswa?>(null) }
     var riwayatList by remember { mutableStateOf<List<RiwayatDana>>(emptyList()) }
     var showWithdrawDialouge by remember {mutableStateOf(false)}
@@ -163,6 +170,15 @@ fun DetailAnakScreen(
                     keterangan = keterangan,
                     riwayatViewModel = riwayatViewModel
                 )
+                riwayatList = riwayatList+RiwayatDana(
+                    nim = anakNim,
+                    jumlah = jumlah,
+                    keterangan = keterangan,
+                    goingIn = false,
+                    tanggal = getTodayDate()
+                )
+
+
                 showWithdrawDialouge = false
             }
         )

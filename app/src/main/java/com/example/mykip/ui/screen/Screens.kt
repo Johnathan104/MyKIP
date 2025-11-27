@@ -47,12 +47,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.example.mykip.BuildConfig
 import com.example.mykip.data.Mahasiswa
 import com.example.mykip.R
+import com.example.mykip.data.RiwayatDana
 import com.example.mykip.data.contohAnak
 import com.example.mykip.data.riwayatUntuk
 import com.example.mykip.ui.viewModel.UserViewModel
 import com.example.mykip.ui.screen.DaftarAnakScreen
+import com.example.mykip.viewmodel.MahasiswaViewModel
+import com.example.mykip.viewmodel.RiwayatDanaViewModel
 
 
 @Composable
@@ -148,15 +152,32 @@ fun FeatureItem(text: String) {
 fun ProfileScreen(
     viewModel: UserViewModel,
     navController: NavController,
+    mahasiswaViewModel: MahasiswaViewModel,
+    riwayatViewModel: RiwayatDanaViewModel,
     onLogout: () -> Unit
 ) {
     val state = viewModel.uiState
-    val user = viewModel.loggedInUser
+    var user by  remember {mutableStateOf(viewModel.loggedInUser)}
+
     // --- DATA DUMMY (nanti bisa diganti ViewModel) ---
     val totalSaldo = "Rp."+user?.balance.toString()
-    val jumlahAnak = 38
-    val transaksiMasuk = 14
-    val transaksiKeluar = 9
+    var mahasiswaList by remember { mutableStateOf(emptyList<Mahasiswa>()) }
+    var riwayatList by remember { mutableStateOf(emptyList< RiwayatDana>()) }
+    LaunchedEffect(user?.nim) {
+        mahasiswaViewModel.getAll { mahasiswaList = it }
+        riwayatViewModel.getByNim(user!!.nim){
+            riwayatList= it
+        }
+
+    }
+
+    val jumlahAnak = mahasiswaList.count()
+    val transaksiMasuk = riwayatList.count({it.goingIn})
+    val transaksiKeluar = riwayatList.count({!it.goingIn})
+
+    // ========================
+    // PANEL USER
+    // ========================
 
     Column(
         modifier = Modifier
@@ -274,21 +295,25 @@ fun ProfileScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 InfoItem(label = "Total Saldo KIP", value = totalSaldo)
-                InfoItem(label = "Jumlah Anak Terdaftar", value = "$jumlahAnak anak")
-                InfoItem(label = "Transaksi Masuk", value = "$transaksiMasuk transaksi")
-                InfoItem(label = "Transaksi Keluar", value = "$transaksiKeluar transaksi")
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Button(
-                    onClick = {
-                        // TODO: NAVIGASI KE HALAMAN ADMIN
-                        navController.navigate("kelolaDana")
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Kelola Dana KIP", fontWeight = FontWeight.Bold)
+                InfoItem(label= "is admin:", value = user?.isAdmin.toString())
+                if(user?.isAdmin == true) InfoItem(label = "Jumlah Mahasiswa Terdaftar", value = "$jumlahAnak mahasiswa")
+                if(user?.isAdmin == false){
+                    InfoItem(label = "Transaksi Masuk", value = "$transaksiMasuk transaksi")
+                    InfoItem(label = "Transaksi Keluar", value = "$transaksiKeluar transaksi")
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = {
+                            // TODO: NAVIGASI KE HALAMAN ADMIN
+                            navController.navigate("kelolaDana")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Kelola Dana KIP", fontWeight = FontWeight.Bold)
+                    }
                 }
+
+
+
             }
         }
 
@@ -306,6 +331,33 @@ fun ProfileScreen(
                 }
             ) {
                 Text(text = "Logout", fontWeight = FontWeight.Bold)
+            }
+
+        }
+        // ========================
+        // DEBUG: TOGGLE ADMIN
+        // ========================
+        if (BuildConfig.DEBUG) {
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Button(
+                onClick = {
+                    user?.let {
+                        val updated = it.copy(isAdmin = !it.isAdmin)
+                        viewModel.updateUser(updated)
+                        user = updated
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.DarkGray
+                )
+            ) {
+                Text(
+                    text = if (user?.isAdmin == true) "Switch to User (Logout first to see effect)" else "Switch to Admin (Debug)",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
             }
         }
     }

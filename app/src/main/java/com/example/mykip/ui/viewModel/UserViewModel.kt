@@ -42,6 +42,16 @@ class UserViewModel(
             onResult(repository.getAllUsers())
         }
     }
+    fun updateUser(user:User){
+        viewModelScope.launch{
+            repository.updateUser(user)
+        }
+    }
+    fun deleteUser(user:User){
+        viewModelScope.launch{
+            repository.deleteUser(user)
+        }
+    }
     fun login(nim: String, password: String) {
         // Validasi input
         if (nim.isBlank() || password.isBlank()) {
@@ -87,10 +97,13 @@ class UserViewModel(
         riwayatViewModel: RiwayatDanaViewModel
     ) {
         viewModelScope.launch {
-            val user = repository.getUserByNim(nim) ?: return@launch
+            val user = loggedInUser
+            if(user?.isAdmin != true){
+                return@launch
+            }
+            val target = repository.getUserByNim(nim) ?: return@launch
 
-            val updatedBalance = user.balance + jumlah
-            val flupdatedBalance = updatedBalance.toFloat()
+            val updatedBalance = target.balance + jumlah
             repository.updateBalance(nim, updatedBalance)
 
             riwayatViewModel.insertRiwayat(
@@ -100,9 +113,13 @@ class UserViewModel(
                 keterangan = keterangan
             )
 
-            loadUser(nim) // refresh state
+            // ONLY reload logged-in user if the deposit is for THEM
+            if (loggedInUser?.nim == nim) {
+                loadUser(nim)
+            }
         }
     }
+
     fun penarikan(
         nim: String,
         jumlah: Int,

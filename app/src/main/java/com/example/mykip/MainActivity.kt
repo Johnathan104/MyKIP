@@ -73,12 +73,19 @@ fun MyApp() {
             RiwayatDanaRepository(database.riwayatDanaDao())
         )
     )
-
-    val bottomItems = listOf(
+    val user = viewModel.loggedInUser
+    var bottomItems = listOf(
         BottomNavScreen.Home,
         BottomNavScreen.Profile,
-        BottomNavScreen.Search
     )
+    if(user?.isAdmin == true){
+        bottomItems = listOf(
+            BottomNavScreen.Home,
+            BottomNavScreen.Profile,
+            BottomNavScreen.Search
+        )
+    }
+
 
     Scaffold(
         bottomBar = {
@@ -138,7 +145,9 @@ fun MyApp() {
                         navController.navigate(BottomNavScreen.Login.route) {
                             popUpTo(BottomNavScreen.Home.route) { inclusive = true }
                         }
-                    }
+                    },
+                    mahasiswaViewModel = mahasiswaViewModel,
+                    riwayatViewModel = riwayatViewModel
                 )
             }
 
@@ -152,6 +161,18 @@ fun MyApp() {
             }
 
             composable("daftarAnak") {
+
+                val user = viewModel.loggedInUser
+
+                // If user is NOT ADMIN → block access
+                if (user?.isAdmin != true) {
+                    // Option A: go back
+                    LaunchedEffect(Unit) {
+                        navController.popBackStack()
+                    }
+                    Text("Anda tidak memiliki akses.")  // optional placeholder
+                    return@composable
+                }
                 DaftarAnakScreen(
                     navController = navController,
                     userViewModel = viewModel,
@@ -160,6 +181,18 @@ fun MyApp() {
                 )
             }
             composable("kelolaDana"){
+
+                val user = viewModel.loggedInUser
+
+                // If user is NOT ADMIN → block access
+                if (user?.isAdmin != true) {
+                    // Option A: go back
+                    LaunchedEffect(Unit) {
+                        navController.popBackStack()
+                    }
+                    Text("Anda tidak memiliki akses.")  // optional placeholder
+                    return@composable
+                }
                 KelolaDanaScreen(
                      viewModel,
                     riwayatViewModel,

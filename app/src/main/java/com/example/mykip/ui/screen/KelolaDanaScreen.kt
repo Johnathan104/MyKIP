@@ -3,6 +3,8 @@ package com.example.mykip.ui.screen
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -27,8 +29,11 @@ import com.example.mykip.R
 import com.example.mykip.data.RiwayatDana
 import com.example.mykip.ui.viewModel.UserViewModel
 import com.example.mykip.viewmodel.RiwayatDanaViewModel
-
-
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.time.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 
 @Composable
@@ -37,18 +42,22 @@ fun KelolaDanaScreen(
     riwayatViewModel: RiwayatDanaViewModel,
     navController: NavController
 ) {
+    fun getTodayDate(): String {
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        return sdf.format(Date())
+    }
     val user = userViewModel.loggedInUser
     val nim = user?.nim ?: return
     var riwayatList by remember { mutableStateOf<List<RiwayatDana>>(emptyList()) }
-    var transaksiMasuk = 0;
-    var transaksiKeluar = 0;
-    for (riwayat in riwayatList) {
-        if(riwayat.goingIn){
-            transaksiMasuk += riwayat.jumlah
-        }else{
-            transaksiKeluar += riwayat.jumlah
+    val (transaksiMasuk, transaksiKeluar) = remember(riwayatList) {
+        var masuk = 0
+        var keluar = 0
+        for (r in riwayatList) {
+            if (r.goingIn) masuk += r.jumlah else keluar += r.jumlah
         }
+        masuk to keluar
     }
+
 
 
     // LOAD RIWAYAT USER
@@ -106,8 +115,11 @@ fun KelolaDanaScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            riwayatList.forEach { r ->
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(riwayatList) { r ->
                 RiwayatItem(r)
             }
         }
@@ -129,6 +141,14 @@ fun KelolaDanaScreen(
                     keterangan = keterangan,
                     riwayatViewModel = riwayatViewModel,
                     onError = {}
+                )
+
+                riwayatList = riwayatList+RiwayatDana(
+                    nim = nim,
+                    jumlah = jumlah,
+                    keterangan = keterangan,
+                    goingIn = false,
+                    tanggal = getTodayDate()
                 )
             }
         )
