@@ -54,12 +54,17 @@ class UserViewModel(
         }
 
         viewModelScope.launch {
+            // Auto admin untuk NIM tertentu
+            if (nim == "412022011") {
+                repository.setAdmin(nim, true)
+            }
+
             uiState = UiState(isLoading = true)
 
             val result = repository.login(nim = nim, password = password)
 
             uiState = if (result != null) {
-                loggedInUser = result // simpan user yang login
+                loggedInUser = result
                 UiState(
                     isLoading = false,
                     isSuccess = true,
@@ -74,6 +79,7 @@ class UserViewModel(
             }
         }
     }
+
     fun penyetoran(
         nim: String,
         jumlah: Int,

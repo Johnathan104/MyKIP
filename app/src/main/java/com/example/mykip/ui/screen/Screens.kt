@@ -208,6 +208,7 @@ fun ProfileScreen(
                 ) {
                     Text(text = "NIM", fontWeight = FontWeight.Medium)
                     Text(text = "Email", fontWeight = FontWeight.Medium)
+                    Text(text = "Role", fontWeight = FontWeight.Medium)   // <<--- tambahan
                 }
 
                 Column(
@@ -233,8 +234,21 @@ fun ProfileScreen(
                             fontWeight = FontWeight.SemiBold
                         )
                     }
+
+                    // ============== ROLE ADMIN / USER ===================
+                    Row {
+                        Text(text = ":", fontWeight = FontWeight.Medium)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (user?.isAdmin == true) "Admin" else "User",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (user?.isAdmin == true) Color(0xFF1565C0) else Color.Black
+                        )
+                    }
                 }
             }
+
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -307,317 +321,4 @@ fun InfoItem(label: String, value: String) {
         Text(text = label, fontWeight = FontWeight.Medium)
         Text(text = value, fontWeight = FontWeight.SemiBold)
     }
-}
-
-
-
-@Composable
-fun SearchScreen() {
-    MyKIPTheme {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            DaftarMahasiswa(mhs = contohMhs())
-        }
-    }
-}
-
-//@OptIn(ExperimentalMaterial3Api::class)
-//@Composable
-//fun DaftarAnakScreen(nav: NavHostController) {
-//
-//    var query by rememberSaveable { mutableStateOf("") }
-//    val anakList = contohAnak()
-//
-//    val filtered = anakList.filter {
-//        it.nama.contains(query, ignoreCase = true) ||
-//                it.kelas.contains(query, ignoreCase = true)
-//    }
-//
-//    Scaffold(
-//        topBar = {
-//            CenterAlignedTopAppBar(
-//                title = { Text("Daftar Anak") }
-//            )
-//        }
-//    ) { inner ->
-//        Column(modifier = Modifier.padding(inner)) {
-//
-//            OutlinedTextField(
-//                value = query,
-//                onValueChange = { query = it },
-//                label = { Text("Cari anak...") },
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .padding(16.dp)
-//            )
-//
-//            LazyColumn(
-//                contentPadding = PaddingValues(16.dp),
-//                verticalArrangement = Arrangement.spacedBy(12.dp)
-//            ) {
-//                items(filtered) { anak ->
-//                    Card(
-//                        modifier = Modifier
-//                            .fillMaxWidth()
-//                            .clickable {
-//                                nav.navigate("detailAnak/${anak.id}")
-//                            },
-//                        elevation = CardDefaults.cardElevation(4.dp)
-//                    ) {
-//                        Row(
-//                            modifier = Modifier.padding(12.dp),
-//                            verticalAlignment = Alignment.CenterVertically
-//                        ) {
-//                            Image(
-//                                painter = painterResource(id = anak.photoResId),
-//                                contentDescription = anak.nama,
-//                                modifier = Modifier
-//                                    .size(70.dp)
-//                                    .clip(RoundedCornerShape(8.dp))
-//                            )
-//
-//                            Spacer(modifier = Modifier.width(12.dp))
-//
-//                            Column {
-//                                Text(anak.nama, fontWeight = FontWeight.Bold)
-//                                Text("Kelas: ${anak.kelas}")
-//                                Text("Tersisa: Rp ${anak.danaTersisa}")
-//                                Text("Terpakai: Rp ${anak.danaTerpakai}")
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
-//}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DetailAnakScreen(anakId: String, nav: NavHostController) {
-
-    val anak = contohAnak().find { it.id == anakId }
-    val riwayat = riwayatUntuk(anakId)
-
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Detail Anak") },
-                navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = null)
-                    }
-                }
-            )
-        }
-    ) { inner ->
-
-        if (anak == null) {
-            Text("Data tidak ditemukan", modifier = Modifier.padding(16.dp))
-            return@Scaffold
-        }
-
-        Column(modifier = Modifier.padding(inner).padding(16.dp)) {
-
-            // HEADER
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    painter = painterResource(id = anak.photoResId),
-                    contentDescription = anak.nama,
-                    modifier = Modifier.size(80.dp).clip(RoundedCornerShape(8.dp))
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column {
-                    Text(anak.nama, style = MaterialTheme.typography.titleLarge)
-                    Text("Kelas: ${anak.kelas}")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // DANA
-            Text("Dana Tersisa: Rp ${anak.danaTersisa}")
-            Text("Dana Terpakai: Rp ${anak.danaTerpakai}")
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Text("Riwayat Pemakaian Dana", fontWeight = FontWeight.Bold)
-
-            Spacer(Modifier.height(8.dp))
-
-            riwayat.forEach {
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    elevation = CardDefaults.cardElevation(2.dp)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(it.tanggal, fontWeight = FontWeight.Bold)
-                        Text("Rp ${it.jumlah}")
-                        Text(it.keterangan)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DaftarMahasiswa(mhs: List<Mahasiswa>) {
-    val context = LocalContext.current
-    var query by rememberSaveable { mutableStateOf("") }
-
-    val filtered = remember(mhs, query) {
-        if (query.isBlank()) mhs
-        else {
-            val q = query.trim().lowercase()
-            mhs.filter { s ->
-                s.nama.lowercase().contains(q) ||
-                s.nim.lowercase().contains(q) ||
-                s.jurusan.lowercase().contains(q)
-            }
-        }
-    }
-
-    val listState = rememberLazyListState()
-
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Daftar Mahasiswa") }
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-        ) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                label = { Text("Cari mahasiswa...") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            )
-
-            // ✅ Teks hasil pencarian
-            Text(
-                text = if (query.isBlank())
-                    "Menampilkan semua (${mhs.size}) mahasiswa"
-                else
-                    "Menampilkan ${filtered.size} dari ${mhs.size} mahasiswa",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-            )
-
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(8.dp)
-            ) {
-                items(filtered) { data ->
-                    CardMahasiswa(data)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun CardMahasiswa(mhs: Mahasiswa) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(12.dp)
-        ) {
-            Image(
-                painter = painterResource(id = mhs.photoResId),
-                contentDescription = "Foto ${mhs.nama}",
-                modifier = Modifier
-                    .size(60.dp)
-                    .padding(end = 12.dp)
-            )
-
-            Column {
-                Text(
-                    text = mhs.nama,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-                Text(
-                    text = "NIM: ${mhs.nim}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    text = "Jurusan: ${mhs.jurusan}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-        }
-    }
-}
-
-fun contohMhs(): List<Mahasiswa> = listOf(
-    Mahasiswa(
-        nim = "200201001",
-        nama = "Blessy Jeniffer",
-        jurusan = "Informatika",
-        photoResId = R.drawable.avatar1
-    ),
-    Mahasiswa(
-        nim = "200201002",
-        nama = "Vanda Christie",
-        jurusan = "Sistem Informasi",
-        photoResId = R.drawable.avatar2
-    ),
-    Mahasiswa(
-        nim = "200201003",
-        nama = "Brino Alfaro",
-        jurusan = "Informatika",
-        photoResId = R.drawable.avatar1
-    ),
-    Mahasiswa(
-        nim = "200201004",
-        nama = "Wurrie Anneta",
-        jurusan = "Teknik Komputer",
-        photoResId = R.drawable.avatar2
-    ),
-    Mahasiswa(
-        nim = "200201005",
-        nama = "Prasti Haruko",
-        jurusan = "Informatika",
-        photoResId = R.drawable.avatar1
-    ),
-    Mahasiswa(
-        nim = "200201006",
-        nama = "Molly Travella",
-        jurusan = "Teknik Komputer",
-        photoResId = R.drawable.avatar2
-    )
-)
-
-@Preview
-@Composable
-fun HomeScreenPreview(){
-    HomeScreen()
-}
-
-
-
-@Preview(showBackground = true)
-@Composable
-fun SearchScreenPreview(){
-    SearchScreen()
 }

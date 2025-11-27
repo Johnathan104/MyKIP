@@ -62,8 +62,14 @@ fun DaftarAnakScreen(
 
     // Recompute anakList whenever mahasiswaList, userList, or riwayatList changes
     LaunchedEffect(mahasiswaList, userList, riwayatList) {
-        if (mahasiswaList.isNotEmpty() && userList.isNotEmpty() && riwayatList.isNotEmpty()) {
-            anakList = mahasiswaList.map { mhs ->
+        if (mahasiswaList.isNotEmpty() && userList.isNotEmpty()) {
+
+            val mahasiswaNonAdmin = mahasiswaList.filter { mhs ->
+                val tiedUser = userList.find { it.nim == mhs.nim }
+                tiedUser?.isAdmin == false
+            }
+
+            anakList = mahasiswaNonAdmin.map { mhs ->
                 val tiedUser = userList.find { it.nim == mhs.nim }
                 val totalMasuk = tiedUser?.balance ?: 0
 
@@ -81,6 +87,8 @@ fun DaftarAnakScreen(
             }
         }
     }
+
+
 
     // Filtered list based on query
     val filtered = remember(query, anakList) {
