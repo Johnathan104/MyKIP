@@ -51,6 +51,7 @@ fun AppNavigation(
             LoginScreen(
                 viewModel,
                 onLoginSuccess = {},
+                orangTuaViewModel = orangTuaViewModel,
                 onNavigateToRegister = { navController.navigate("register") }
             )
         }

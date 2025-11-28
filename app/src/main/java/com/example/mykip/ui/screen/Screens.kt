@@ -56,6 +56,7 @@ import com.example.mykip.data.riwayatUntuk
 import com.example.mykip.ui.viewModel.UserViewModel
 import com.example.mykip.ui.screen.DaftarAnakScreen
 import com.example.mykip.viewmodel.MahasiswaViewModel
+import com.example.mykip.viewmodel.OrangTuaViewModel
 import com.example.mykip.viewmodel.RiwayatDanaViewModel
 
 
@@ -147,47 +148,86 @@ fun FeatureItem(text: String) {
     )
 }
 
-
 @Composable
 fun ProfileScreen(
     viewModel: UserViewModel,
+    orangTuaViewModel: OrangTuaViewModel,
     navController: NavController,
     mahasiswaViewModel: MahasiswaViewModel,
     riwayatViewModel: RiwayatDanaViewModel,
     onLogout: () -> Unit
 ) {
-    val state = viewModel.uiState
-    var user by  remember {mutableStateOf(viewModel.loggedInUser)}
+    val user = viewModel.loggedInUser
+    val orangTua = orangTuaViewModel.loggedInOrtu
 
-    // --- DATA DUMMY (nanti bisa diganti ViewModel) ---
-    val totalSaldo = "Rp."+user?.balance.toString()
+    // ======================================
+    // DETECT ROLE
+    // ======================================
+    val isOrtu = orangTua != null
+    val isAdmin = user?.isAdmin == true
+    val isMahasiswa = user != null && !isAdmin
+
+    // ======================================
+    // LOAD DATA
+    // ======================================
     var mahasiswaList by remember { mutableStateOf(emptyList<Mahasiswa>()) }
-    var riwayatList by remember { mutableStateOf(emptyList< RiwayatDana>()) }
-    LaunchedEffect(user?.nim) {
-        mahasiswaViewModel.getAll { mahasiswaList = it }
-        riwayatViewModel.getByNim(user!!.nim){
-            riwayatList= it
-        }
+    var riwayatList by remember { mutableStateOf(emptyList<RiwayatDana>()) }
 
+    LaunchedEffect(Unit) {
+        mahasiswaViewModel.getAll { mahasiswaList = it }
+
+        if (isMahasiswa) {
+            riwayatViewModel.getByNim(user!!.nim) {
+                riwayatList = it
+            }
+        }
+        if (isOrtu) {
+            riwayatViewModel.getByNim(orangTua!!.anakNim) {
+                riwayatList = it
+            }
+        }
     }
 
-    val jumlahAnak = mahasiswaList.count()
-    val transaksiMasuk = riwayatList.count({it.goingIn})
-    val transaksiKeluar = riwayatList.count({!it.goingIn})
+    val jumlahAnak = mahasiswaList.size
+    val transaksiMasuk = riwayatList.count { it.goingIn }
+    val transaksiKeluar = riwayatList.count { !it.goingIn }
 
-    // ========================
-    // PANEL USER
-    // ========================
+    val displayedNim =
+        when {
+            isMahasiswa -> user!!.nim
+            isOrtu -> orangTua!!.anakNim
+            else -> "-"
+        }
 
+    val displayedEmail =
+        when {
+            isMahasiswa -> user!!.email
+            isOrtu -> orangTua!!.email
+            else -> "-"
+        }
+
+    val displayedRole =
+        when {
+            isOrtu -> "Orang Tua"
+            isAdmin -> "Admin"
+            else -> "Mahasiswa"
+        }
+
+    val totalSaldo =
+        if (isMahasiswa) "Rp. ${user!!.balance}" else "-"
+
+
+    // ======================================
+    // UI
+    // ======================================
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(18.dp)
+        Modifier.fillMaxSize().padding(18.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.Top
-        ) {
-            // FOTO DAN INFO UKRIDA
+
+        // --------------------------------------
+        // FOTO & HEADER
+        // --------------------------------------
+        Row(verticalAlignment = Alignment.Top) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.width(150.dp)
@@ -207,76 +247,71 @@ fun ProfileScreen(
                     text = "Universitas Kristen Krida Wacana",
                     fontWeight = FontWeight.Medium,
                     fontSize = 14.sp,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    textAlign = TextAlign.Center
                 )
             }
 
             Spacer(modifier = Modifier.width(24.dp))
 
-            // DATA USER
+            // --------------------------------------
+            // DATA USER / ORANGTUA
+            // --------------------------------------
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color.LightGray)
-                    .padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(8.dp)
             ) {
-                Column(
-                    modifier = Modifier.width(60.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(text = "NIM", fontWeight = FontWeight.Medium)
-                    Text(text = "Email", fontWeight = FontWeight.Medium)
-                    Text(text = "Role", fontWeight = FontWeight.Medium)   // <<--- tambahan
+                Column(modifier = Modifier.width(60.dp)) {
+                    Text("NIM", fontWeight = FontWeight.Medium)
+                    Text("Email", fontWeight = FontWeight.Medium)
+                    Text("Role", fontWeight = FontWeight.Medium)
                 }
 
-                Column(
-                    modifier = Modifier.padding(start = 2.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
+                Column(modifier = Modifier.padding(start = 2.dp)) {
+
+                    // NIM
                     Row {
-                        Text(text = ":", fontWeight = FontWeight.Medium)
+                        Text(":", fontWeight = FontWeight.Medium)
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = user?.nim ?: "-",
+                            text = displayedNim,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
 
+                    // EMAIL
                     Row {
-                        Text(text = ":", fontWeight = FontWeight.Medium)
+                        Text(":", fontWeight = FontWeight.Medium)
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = user?.email ?: "-",
+                            text = displayedEmail,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
 
-                    // ============== ROLE ADMIN / USER ===================
+                    // ROLE
                     Row {
-                        Text(text = ":", fontWeight = FontWeight.Medium)
+                        Text(":", fontWeight = FontWeight.Medium)
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (user?.isAdmin == true) "Admin" else "User",
+                            text = displayedRole,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (user?.isAdmin == true) Color(0xFF1565C0) else Color.Black
+                            color = if (isAdmin) Color(0xFF1565C0) else Color.Black
                         )
                     }
                 }
             }
-
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // ========================
-        // PANEL ADMIN DANA KIP
-        // ========================
+        // --------------------------------------
+        // PANEL INFORMASI
+        // --------------------------------------
         Text(
             text = "Informasi Dana KIP",
             style = MaterialTheme.typography.headlineSmall,
@@ -286,82 +321,93 @@ fun ProfileScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color(0xFFE9F0FF)),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                InfoItem(label = "Total Saldo KIP", value = totalSaldo)
-                InfoItem(label= "is admin:", value = user?.isAdmin.toString())
-                if(user?.isAdmin == true) InfoItem(label = "Jumlah Mahasiswa Terdaftar", value = "$jumlahAnak mahasiswa")
-                if(user?.isAdmin == false){
-                    InfoItem(label = "Transaksi Masuk", value = "$transaksiMasuk transaksi")
-                    InfoItem(label = "Transaksi Keluar", value = "$transaksiKeluar transaksi")
+
+            Column(Modifier.padding(16.dp)) {
+
+                // Mahasiswa only
+                if (isMahasiswa) {
+                    InfoItem("Total Saldo KIP", totalSaldo)
+                    InfoItem("Transaksi Masuk", "$transaksiMasuk transaksi")
+                    InfoItem("Transaksi Keluar", "$transaksiKeluar transaksi")
+
                     Spacer(modifier = Modifier.height(10.dp))
                     Button(
-                        onClick = {
-                            // TODO: NAVIGASI KE HALAMAN ADMIN
-                            navController.navigate("kelolaDana")
-                        },
+                        onClick = { navController.navigate("kelolaDana") },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Kelola Dana KIP", fontWeight = FontWeight.Bold)
                     }
+                    // ========================
+                    // DEBUG: TOGGLE ADMIN
+                    // ========================
+                    if (BuildConfig.DEBUG) {
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        Button(
+                            onClick = {
+                                user?.let {
+                                    val updated = it.copy(isAdmin = !it.isAdmin)
+                                    viewModel.updateUser(updated)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.DarkGray
+                            )
+                        ) {
+                            Text(
+                                text = if (user?.isAdmin == true)
+                                    "Switch to User (Logout first to see effect)"
+                                else
+                                    "Switch to Admin  (Logout first to see effect)",
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+
                 }
 
+                // Admin only
+                if (isAdmin) {
+                    InfoItem("Jumlah Mahasiswa Terdaftar", "$jumlahAnak mahasiswa")
+                }
 
-
+                // Orang Tua only
+                if (isOrtu) {
+                    InfoItem("Nama Anak", orangTua!!.anakNim)
+                    InfoItem("Transaksi Masuk", "$transaksiMasuk transaksi")
+                    InfoItem("Transaksi Keluar", "$transaksiKeluar transaksi")
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(40.dp))
 
+        // --------------------------------------
         // LOGOUT
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center
-        ) {
+        // --------------------------------------
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Button(
                 onClick = {
                     viewModel.logout()
+                    orangTuaViewModel.logout()
                     onLogout()
                 }
             ) {
-                Text(text = "Logout", fontWeight = FontWeight.Bold)
-            }
-
-        }
-        // ========================
-        // DEBUG: TOGGLE ADMIN
-        // ========================
-        if (BuildConfig.DEBUG) {
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Button(
-                onClick = {
-                    user?.let {
-                        val updated = it.copy(isAdmin = !it.isAdmin)
-                        viewModel.updateUser(updated)
-                        user = updated
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.DarkGray
-                )
-            ) {
-                Text(
-                    text = if (user?.isAdmin == true) "Switch to User (Logout first to see effect)" else "Switch to Admin (Debug)",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+                Text("Logout", fontWeight = FontWeight.Bold)
             }
         }
+
     }
 }
+
+
 
 // COMPONENT UNTUK ITEM INFO
 @Composable

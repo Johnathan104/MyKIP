@@ -14,6 +14,9 @@ ksp = "2.0.21-1.0.25"   # ✅ Must match Kotlin 2.0.21
 navigationRuntimeKtx = "2.9.6"
 navigationCompose = "2.9.6"
 foundation = "1.9.5"
+googleGmsGoogleServices = "4.4.4"
+firebaseFirestore = "26.0.2"
+firebaseAuth = "24.0.1"
 
 [libraries]
 
@@ -37,9 +40,12 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 androidx-navigation-runtime-ktx = { group = "androidx.navigation", name = "navigation-runtime-ktx", version.ref = "navigationRuntimeKtx" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore", version.ref = "firebaseFirestore" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebaseAuth" }
 
 [plugins]
 kotlin-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }   # ✅ FIX: Correct plugin syntax
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+google-gms-google-services = { id = "com.google.gms.google-services", version.ref = "googleGmsGoogleServices" }

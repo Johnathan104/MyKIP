@@ -5,91 +5,123 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.mykip.data.RiwayatDana
 import com.example.mykip.data.User
-import com.example.mykip.repository.UserRepository
 import com.example.mykip.viewmodel.RiwayatDanaViewModel
+import com.example.mykip.data.RiwayatDana
+import com.example.mykip.repository.UserRepository
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
-
+import kotlinx.coroutines.tasks.await
 
 class UserViewModel(
-    private val repository: UserRepository
+    private val repository: UserRepository // KEEPED for compatibility (even unused)
 ) : ViewModel() {
+
+    private val auth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
 
     var uiState by mutableStateOf(UiState())
         private set
 
-    // Simpan user yang login
     var loggedInUser: User? by mutableStateOf(null)
         private set
 
-    /** Reset state ke default */
+    // RESET
     fun resetState() {
         uiState = UiState()
     }
+
+    // LOAD USER (from Firestore)
     fun loadUser(nim: String) {
         viewModelScope.launch {
-            loggedInUser = repository.getUserByNim(nim)
+            val snapshot = db.collection("users")
+                .whereEqualTo("nim", nim)
+                .get()
+                .await()
+
+            loggedInUser = snapshot.documents.firstOrNull()?.toObject(User::class.java)
         }
     }
+
+    // GET USER BY NIM
     fun getByNim(nim: String, onResult: (User?) -> Unit) {
         viewModelScope.launch {
-            onResult(repository.getUserByNim(nim))
+            val snapshot = db.collection("users")
+                .whereEqualTo("nim", nim)
+                .get()
+                .await()
+
+            onResult(snapshot.documents.firstOrNull()?.toObject(User::class.java))
         }
     }
-    fun getAllUsers(onResult: (List<User>) -> Unit){
+
+    // GET ALL USERS
+    fun getAllUsers(onResult: (List<User>) -> Unit) {
         viewModelScope.launch {
-            onResult(repository.getAllUsers())
+            val list = db.collection("users").get().await()
+                .documents.mapNotNull { it.toObject(User::class.java) }
+
+            onResult(list)
         }
     }
-    fun updateUser(user:User){
-        viewModelScope.launch{
-            repository.updateUser(user)
+
+    // UPDATE USER
+    fun updateUser(user: User) {
+        viewModelScope.launch {
+            db.collection("users")
+                .document(user.uid)
+                .set(user)
+                .await()
         }
     }
-    fun deleteUser(user:User){
-        viewModelScope.launch{
-            repository.deleteUser(user)
+
+    // DELETE USER
+    fun deleteUser(user: User) {
+        viewModelScope.launch {
+            db.collection("users")
+                .document(user.uid)
+                .delete()
+                .await()
         }
     }
+
+    // LOGIN (nim + password → convert to email internally)
     fun login(nim: String, password: String) {
-        // Validasi input
         if (nim.isBlank() || password.isBlank()) {
-            uiState = UiState(
-                isLoading = false,
-                isSuccess = false,
-                message = "NIM and Password cannot be empty"
-            )
+            uiState = UiState(false, false, "NIM and Password cannot be empty")
             return
         }
 
         viewModelScope.launch {
-            // Auto admin untuk NIM tertentu
-            if (nim == "412022011") {
-                repository.setAdmin(nim, true)
-            }
-
             uiState = UiState(isLoading = true)
 
-            val result = repository.login(nim = nim, password = password)
+            // find user by NIM
+            val snap = db.collection("users")
+                .whereEqualTo("nim", nim)
+                .whereEqualTo("password", password)
+                .get()
+                .await()
 
-            uiState = if (result != null) {
-                loggedInUser = result
-                UiState(
-                    isLoading = false,
-                    isSuccess = true,
-                    message = "Login successful"
-                )
-            } else {
-                UiState(
-                    isLoading = false,
-                    isSuccess = false,
-                    message = "Login failed: NIM atau password salah"
-                )
+            val user = snap.documents.firstOrNull()?.toObject(User::class.java)
+
+            if (user == null) {
+                uiState = UiState(false, false, "Login failed: NIM atau password salah")
+                return@launch
+            }
+
+            // Login via Firebase Auth using stored email
+            try {
+                auth.signInWithEmailAndPassword(user.email, password).await()
+                loggedInUser = user
+                uiState = UiState(false, true, "Login successful")
+            } catch (e: Exception) {
+                uiState = UiState(false, false, "Auth failed: ${e.message}")
             }
         }
     }
 
+    // SETOR / PENYETORAN
     fun penyetoran(
         nim: String,
         jumlah: Int,
@@ -97,29 +129,31 @@ class UserViewModel(
         riwayatViewModel: RiwayatDanaViewModel
     ) {
         viewModelScope.launch {
-            val user = loggedInUser
-            if(user?.isAdmin != true){
-                return@launch
-            }
-            val target = repository.getUserByNim(nim) ?: return@launch
+            val admin = loggedInUser
+            if (admin?.isAdmin != true) return@launch
 
-            val updatedBalance = target.balance + jumlah
-            repository.updateBalance(nim, updatedBalance)
+            val snap = db.collection("users")
+                .whereEqualTo("nim", nim)
+                .get()
+                .await()
 
-            riwayatViewModel.insertRiwayat(
-                nim = nim,
-                jumlah = jumlah,
-                masuk = true,
-                keterangan = keterangan
-            )
+            val target = snap.documents.firstOrNull() ?: return@launch
+            val user = target.toObject(User::class.java) ?: return@launch
 
-            // ONLY reload logged-in user if the deposit is for THEM
-            if (loggedInUser?.nim == nim) {
-                loadUser(nim)
-            }
+            val newBalance = user.balance + jumlah
+
+            db.collection("users")
+                .document(target.id)
+                .update("balance", newBalance)
+                .await()
+
+            riwayatViewModel.insertRiwayat(nim, jumlah, true, keterangan)
+
+            if (loggedInUser?.nim == nim) loadUser(nim)
         }
     }
 
+    // PENARIKAN
     fun penarikan(
         nim: String,
         jumlah: Int,
@@ -128,107 +162,84 @@ class UserViewModel(
         onError: (String?) -> Unit = {}
     ) {
         viewModelScope.launch {
-            val user = repository.getUserByNim(nim) ?: return@launch
-            uiState = UiState(
-                isLoading = true,
-                isSuccess = false,
-            )
+            val snapshot = db.collection("users")
+                .whereEqualTo("nim", nim)
+                .get()
+                .await()
+
+            val user = snapshot.documents.firstOrNull()?.toObject(User::class.java)
+                ?: return@launch
+
+            uiState = UiState(true, false)
+
             if (user.balance < jumlah) {
-                uiState = UiState(
-                    isLoading = false,
-                    isSuccess = false,
-                    message = "Dana tidak mencukupi untuk penarikan"
-                )
+                uiState = UiState(false, false, "Dana tidak mencukupi untuk penarikan")
                 return@launch
             }
 
-            val updatedBalance = user.balance - jumlah
-            repository.updateBalance(nim, updatedBalance)
+            val newBalance = user.balance - jumlah
 
-            riwayatViewModel.insertRiwayat(
-                nim = nim,
-                jumlah = jumlah,
-                masuk = false,
-                keterangan = keterangan
-            )
-            uiState = UiState(
-                isLoading = false,
-                isSuccess = true,
-                message = "Berhasil melakukan penarikan"
-            )
-            loadUser(nim) // refresh UI
+            db.collection("users")
+                .document(snapshot.documents.first().id)
+                .update("balance", newBalance)
+                .await()
+
+            riwayatViewModel.insertRiwayat(nim, jumlah, false, keterangan)
+
+            uiState = UiState(false, true, "Berhasil melakukan penarikan")
+
+            loadUser(nim)
         }
     }
 
+    // REGISTRATION → firebase auth + firestore
     fun register(
         nim: String,
         email: String,
         password: String,
         isMahasiswa: Boolean
     ) {
-
-        // VALIDASI MAHASISWA
-        if (isMahasiswa) {
-            if (nim.isBlank() || email.isBlank() || password.isBlank()) {
-                uiState = UiState(
-                    isLoading = false,
-                    isSuccess = false,
-                    message = "All fields are required (Mahasiswa)"
-                )
-                return
-            }
-        }
-        // VALIDASI ORANG TUA
-        else {
-            if (email.isBlank() || password.isBlank()) {
-                uiState = UiState(
-                    isLoading = false,
-                    isSuccess = false,
-                    message = "Email & Password required (Orang Tua)"
-                )
-                return
-            }
+        if (isMahasiswa && (nim.isBlank() || email.isBlank() || password.isBlank())) {
+            uiState = UiState(false, false, "All fields are required (Mahasiswa)")
+            return
         }
 
-        // REGISTER ke database
+        if (!isMahasiswa && (email.isBlank() || password.isBlank())) {
+            uiState = UiState(false, false, "Email & Password required (Orang Tua)")
+            return
+        }
+
         viewModelScope.launch {
             uiState = UiState(isLoading = true)
 
-            val result = repository.register(
-                User(
-                    nim = if (isMahasiswa) nim else "",     // orang tua tidak punya NIM
-                    email = email,
-                    password = password
-                )
-            )
+            try {
+                // create firebase user
+                val authResult = auth.createUserWithEmailAndPassword(email, password).await()
+                val uid = authResult.user!!.uid
 
-            if (result) {
-                loggedInUser = User(
+                val newUser = User(
+                    uid = uid,
                     nim = if (isMahasiswa) nim else "",
                     email = email,
-                    password = password
+                    password = password,
+                    balance = 0,
+                    isAdmin = false
                 )
-            }
 
-            uiState = if (result) {
-                UiState(
-                    isLoading = false,
-                    isSuccess = true,
-                    message = "Registration successful"
-                )
-            } else {
-                UiState(
-                    isLoading = false,
-                    isSuccess = false,
-                    message = "Registration failed: NIM atau email sudah digunakan"
-                )
+                db.collection("users").document(uid).set(newUser).await()
+
+                loggedInUser = newUser
+
+                uiState = UiState(false, true, "Registration successful")
+            } catch (e: Exception) {
+                uiState = UiState(false, false, "Registration failed: ${e.message}")
             }
         }
     }
 
-
-    /** Logout user */
+    // LOGOUT
     fun logout() {
+        auth.signOut()
         loggedInUser = null
         resetState()
     }

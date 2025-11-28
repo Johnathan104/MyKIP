@@ -56,17 +56,15 @@ fun contohRiwayat(): List<RiwayatDana> = listOf(
 // Tambahkan OrangTua di sini
 @Database(
     entities = [
-        User::class,
         RiwayatDana::class,
         Mahasiswa::class,
         OrangTua::class           // ← WAJIB DITAMBAHKAN
     ],
-    version = 4,                  // ← NAIKKAN VERSION SETIAP UBAH ENTITY
+    version = 10,                  // ← NAIKKAN VERSION SETIAP UBAH ENTITY
     exportSchema = false
 )
 abstract class UserDatabase : RoomDatabase() {
 
-    abstract fun userDao(): UserDao
     abstract fun riwayatDanaDao(): RiwayatDanaDao
     abstract fun mahasiswaDao(): MahasiswaDao
     abstract fun orangTuaDao(): OrangTuaDao     // ← sudah benar

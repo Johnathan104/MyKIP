@@ -36,6 +36,8 @@ import com.example.mykip.viewmodel.RiwayatDanaViewModel
 import com.example.mykip.ui.screen.KelolaDanaScreen
 import com.example.mykip.viewmodel.OrangTuaViewModel
 import com.example.mykip.viewmodel.OrangTuaViewModelFactory
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.firestore
 
 sealed class BottomNavScreen(val route: String, val title: String, val icon: ImageVector? = null) {
     object Home : BottomNavScreen("home", "Home", Icons.Default.Home)
@@ -60,14 +62,14 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MyApp() {
     val navController = rememberNavController()
-
+    val db = Firebase.firestore
     val context = LocalContext.current
     val database = UserDatabase.getDatabase(context)
     val viewModel: UserViewModel =
-        viewModel(factory = UserViewModelFactory(UserRepository(database.userDao())))
+        viewModel(factory = UserViewModelFactory(UserRepository()))
     val mahasiswaViewModel: MahasiswaViewModel = viewModel(
         factory = MahasiswaViewModelFactory(
-            MahasiswaRepository(database.mahasiswaDao())
+            MahasiswaRepository(db)
         )
     )
 
@@ -124,6 +126,7 @@ fun MyApp() {
                             popUpTo(BottomNavScreen.Login.route) { inclusive = true }
                         }
                     },
+                    orangTuaViewModel = orangTuaViewModel,
                     onNavigateToRegister = {
                         navController.navigate(BottomNavScreen.Register.route)
                     }
@@ -147,7 +150,8 @@ fun MyApp() {
             composable(BottomNavScreen.Profile.route) {
                 ProfileScreen(
                     viewModel = viewModel,
-                    navController,
+                    orangTuaViewModel = orangTuaViewModel,
+                    navController = navController,
                     onLogout = {
                         viewModel.logout()
                         navController.navigate(BottomNavScreen.Login.route) {
@@ -157,6 +161,7 @@ fun MyApp() {
                     mahasiswaViewModel = mahasiswaViewModel,
                     riwayatViewModel = riwayatViewModel
                 )
+
             }
 
             composable(BottomNavScreen.Search.route) {
@@ -190,17 +195,7 @@ fun MyApp() {
             }
             composable("kelolaDana"){
 
-                val user = viewModel.loggedInUser
 
-                // If user is NOT ADMIN → block access
-                if (user?.isAdmin != true) {
-                    // Option A: go back
-                    LaunchedEffect(Unit) {
-                        navController.popBackStack()
-                    }
-                    Text("Anda tidak memiliki akses.")  // optional placeholder
-                    return@composable
-                }
                 KelolaDanaScreen(
                      viewModel,
                     riwayatViewModel,

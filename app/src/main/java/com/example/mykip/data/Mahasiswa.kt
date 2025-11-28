@@ -5,9 +5,12 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "tbl_mahasiswa")
 data class Mahasiswa(
-    @PrimaryKey(autoGenerate = false)
-    val nim: String,
-    val nama: String,
-    val jurusan: String,
-    val photoResId: Int
+    @PrimaryKey
+    val nim: String = "",
+    val kuliah: String = "",
+    val semester: Int= 1,
+    val jenjang: String="",
+    val nama: String = "",
+    val jurusan: String = "",
+    val photoResId: Int = 0
 )

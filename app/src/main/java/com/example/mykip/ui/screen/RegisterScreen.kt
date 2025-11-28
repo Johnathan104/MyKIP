@@ -6,14 +6,19 @@ import androidx.compose.animation.*
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.mykip.R
 import com.example.mykip.data.Mahasiswa
 import com.example.mykip.data.OrangTua
@@ -34,18 +39,24 @@ fun RegisterScreen(
     var nim by remember { mutableStateOf("") }
     var nama by remember { mutableStateOf("") }
     var jurusan by remember { mutableStateOf("") }
+    var jenjang by remember{mutableStateOf("")}
+    var kuliah by remember {mutableStateOf("")}
     var expanded by remember { mutableStateOf(false) }
+    val jenjangOptions = listOf("S1", "D4", "D3")
     val jurusanList = listOf("Kedokteran", "Informatika")
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-
+    val scrollState = rememberScrollState()
     val state = userViewModel.uiState
+    LazyColumn {
 
+    }
     Column(
         modifier = Modifier
             .padding(20.dp)
             .fillMaxSize()
+            .verticalScroll(scrollState)
     ) {
         Text(
             text = "Register",
@@ -103,31 +114,43 @@ fun RegisterScreen(
                         label = { Text("Nama") },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(Modifier.height(8.dp))
-
+                    Spacer(Modifier.height(16.dp))
+                    Text(text="Informasi kuliah", fontSize = 16.sp)
                     Box {
-                        OutlinedTextField(
-                            value = jurusan,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Jurusan") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { expanded = true }
-                        )
+                        Column {
 
-                        DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            jurusanList.forEach { item ->
-                                DropdownMenuItem(
-                                    text = { Text(item) },
-                                    onClick = {
-                                        jurusan = item
-                                        expanded = false
-                                    }
-                                )
+                            OutlinedTextField(
+                                value = jurusan,
+                                onValueChange = { jurusan = it },
+                                label = { Text("Jurusan") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+                                value = kuliah,
+                                onValueChange = { kuliah = it },
+                                label = { Text("Kuliah") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(Modifier.height(16.dp))
+
+                            Text("Pilih Jenjang:", style = MaterialTheme.typography.titleMedium)
+
+                            jenjangOptions.forEach { option ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { jenjang = option }
+                                        .padding(vertical = 4.dp)
+                                ) {
+                                    RadioButton(
+                                        selected = jenjang == option,
+                                        onClick = { jenjang = option }
+                                    )
+                                    Text(option)
+                                }
                             }
                         }
                     }
@@ -137,6 +160,12 @@ fun RegisterScreen(
 
                 // ======== FORM ORANG TUA ========
                 if (tab == 1) {
+                    OutlinedTextField(
+                        value = nim,
+                        onValueChange = { nim = it },
+                        label = { Text("NIM") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     OutlinedTextField(
                         value = nama,
                         onValueChange = { nama = it },
@@ -173,29 +202,33 @@ fun RegisterScreen(
             onClick = {
                 val isMahasiswa = selectedTab == 0
 
-                userViewModel.register(
-                    nim = nim,
-                    email = email,
-                    password = password,
-                    isMahasiswa = isMahasiswa
-                )
+
 
                 if (isMahasiswa) {
+                    userViewModel.register(
+                        nim = nim,
+                        email = email,
+                        password = password,
+                        isMahasiswa = isMahasiswa
+                    )
                     mahasiswaViewModel.insert(
                         Mahasiswa(
                             nim = nim,
                             nama = nama,
                             jurusan = jurusan,
+                            jenjang = jenjang,
+                            kuliah= kuliah,
+                            semester = 1,
                             photoResId = R.drawable.avatar1
                         )
                     )
                 } else {
                     orangTuaViewModel.insert(
-                        OrangTua(
+
                             nama = nama,
                             email = email,
-                            anakNim = "" // nanti bisa dihubungkan dengan mahasiswa
-                        )
+                            password=password,
+                            anakNim = nim // nanti bisa dihubungkan dengan mahasiswa
                     )
                 }
 
