@@ -6,7 +6,6 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-
 import com.example.mykip.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +25,7 @@ fun contohMahasiswa(): List<Mahasiswa> = listOf(
         photoResId = R.drawable.avatar2
     )
 )
+
 fun contohRiwayat(): List<RiwayatDana> = listOf(
     RiwayatDana(
         id = 0,
@@ -52,9 +52,16 @@ fun contohRiwayat(): List<RiwayatDana> = listOf(
         keterangan = "Pengeluaran kegiatan"
     )
 )
+
+// Tambahkan OrangTua di sini
 @Database(
-    entities = [User::class, RiwayatDana::class, Mahasiswa::class],
-    version = 3,
+    entities = [
+        User::class,
+        RiwayatDana::class,
+        Mahasiswa::class,
+        OrangTua::class           // ← WAJIB DITAMBAHKAN
+    ],
+    version = 4,                  // ← NAIKKAN VERSION SETIAP UBAH ENTITY
     exportSchema = false
 )
 abstract class UserDatabase : RoomDatabase() {
@@ -62,6 +69,7 @@ abstract class UserDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun riwayatDanaDao(): RiwayatDanaDao
     abstract fun mahasiswaDao(): MahasiswaDao
+    abstract fun orangTuaDao(): OrangTuaDao     // ← sudah benar
 
     companion object {
         @Volatile
@@ -75,20 +83,16 @@ abstract class UserDatabase : RoomDatabase() {
                     "kip_db"
                 )
                     .fallbackToDestructiveMigration()
-                    .addCallback(DatabaseCallback(context))   // <-- insert dummy data here
+                    .addCallback(DatabaseCallback())   // ← callback sederhana
                     .build()
                     .also { INSTANCE = it }
             }
         }
 
-        private class DatabaseCallback(
-            private val context: Context
-        ) : RoomDatabase.Callback() {
-
+        private class DatabaseCallback : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
 
-                // Run suspend DAO calls inside a coroutine
                 CoroutineScope(Dispatchers.IO).launch {
                     val database = INSTANCE ?: return@launch
 
@@ -96,18 +100,17 @@ abstract class UserDatabase : RoomDatabase() {
                     val riwayatDao = database.riwayatDanaDao()
 
                     // Insert sample mahasiswa
-                    contohMahasiswa().forEach { mahasiswa ->
-                        mahasiswaDao.insertMahasiswa(mahasiswa)
+                    contohMahasiswa().forEach { m ->
+                        mahasiswaDao.insertMahasiswa(m)
                     }
 
                     // Insert sample riwayat dana
-                    contohRiwayat().forEach { riwayat ->
-                        riwayatDao.insertRiwayat(riwayat)
+                    contohRiwayat().forEach { r ->
+                        riwayatDao.insertRiwayat(r)
                     }
                 }
             }
         }
-
     }
 }
 

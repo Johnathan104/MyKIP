@@ -160,26 +160,56 @@ class UserViewModel(
         }
     }
 
-    fun register(nim: String, email: String, password: String) {
-        // Validasi input
-        if (nim.isBlank() || email.isBlank() || password.isBlank()) {
-            uiState = UiState(
-                isLoading = false,
-                isSuccess = false,
-                message = "All fields are required"
-            )
-            return
+    fun register(
+        nim: String,
+        email: String,
+        password: String,
+        isMahasiswa: Boolean
+    ) {
+
+        // VALIDASI MAHASISWA
+        if (isMahasiswa) {
+            if (nim.isBlank() || email.isBlank() || password.isBlank()) {
+                uiState = UiState(
+                    isLoading = false,
+                    isSuccess = false,
+                    message = "All fields are required (Mahasiswa)"
+                )
+                return
+            }
+        }
+        // VALIDASI ORANG TUA
+        else {
+            if (email.isBlank() || password.isBlank()) {
+                uiState = UiState(
+                    isLoading = false,
+                    isSuccess = false,
+                    message = "Email & Password required (Orang Tua)"
+                )
+                return
+            }
         }
 
+        // REGISTER ke database
         viewModelScope.launch {
             uiState = UiState(isLoading = true)
 
             val result = repository.register(
-                User(nim = nim, email = email, password = password)
+                User(
+                    nim = if (isMahasiswa) nim else "",     // orang tua tidak punya NIM
+                    email = email,
+                    password = password
+                )
             )
-            if(result){
-                loggedInUser = User(nim = nim, email = email, password = password)
+
+            if (result) {
+                loggedInUser = User(
+                    nim = if (isMahasiswa) nim else "",
+                    email = email,
+                    password = password
+                )
             }
+
             uiState = if (result) {
                 UiState(
                     isLoading = false,
@@ -195,6 +225,7 @@ class UserViewModel(
             }
         }
     }
+
 
     /** Logout user */
     fun logout() {

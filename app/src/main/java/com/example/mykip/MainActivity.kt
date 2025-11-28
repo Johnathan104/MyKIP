@@ -22,6 +22,7 @@ import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.example.mykip.data.UserDatabase
 import com.example.mykip.repository.MahasiswaRepository
+import com.example.mykip.repository.OrangTuaRepository
 import com.example.mykip.repository.RiwayatDanaRepository
 import com.example.mykip.repository.RiwayatDanaViewModelFactory
 import com.example.mykip.repository.UserRepository
@@ -33,6 +34,8 @@ import com.example.mykip.ui.viewModel.UserViewModelFactory
 import com.example.mykip.viewmodel.MahasiswaViewModel
 import com.example.mykip.viewmodel.RiwayatDanaViewModel
 import com.example.mykip.ui.screen.KelolaDanaScreen
+import com.example.mykip.viewmodel.OrangTuaViewModel
+import com.example.mykip.viewmodel.OrangTuaViewModelFactory
 
 sealed class BottomNavScreen(val route: String, val title: String, val icon: ImageVector? = null) {
     object Home : BottomNavScreen("home", "Home", Icons.Default.Home)
@@ -86,6 +89,10 @@ fun MyApp() {
         )
     }
 
+    val orangTuaRepository = OrangTuaRepository(database.orangTuaDao())
+    val orangTuaViewModel: OrangTuaViewModel = viewModel(
+        factory = OrangTuaViewModelFactory(orangTuaRepository)
+    )
 
     Scaffold(
         bottomBar = {
@@ -125,12 +132,13 @@ fun MyApp() {
 
             composable(BottomNavScreen.Register.route) {
                 RegisterScreen(
-                     viewModel,
-                    mahasiswaViewModel,
-
+                    userViewModel = viewModel,
+                    mahasiswaViewModel = mahasiswaViewModel,
+                    orangTuaViewModel = orangTuaViewModel,   // ← WAJIB ADA
                     onNavigateToLogin = { navController.popBackStack() }
                 )
             }
+
 
             composable(BottomNavScreen.Home.route) {
                 HomeScreen()
