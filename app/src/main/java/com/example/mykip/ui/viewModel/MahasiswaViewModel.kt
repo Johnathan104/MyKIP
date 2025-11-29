@@ -5,10 +5,16 @@ import androidx.lifecycle.viewModelScope
 import com.example.mykip.data.Mahasiswa
 import com.example.mykip.repository.MahasiswaRepository
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 class MahasiswaViewModel(
     private val repository: MahasiswaRepository
 ) : ViewModel() {
+
+    var mahasiswa: Mahasiswa? by mutableStateOf(null)
+        private set
 
     fun insert(mahasiswa: Mahasiswa) {
         viewModelScope.launch {
