@@ -1,0 +1,41 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="260dp"
+    android:height="180dp"
+    android:viewportWidth="260"
+    android:viewportHeight="180">
+
+    <!-- Background card gradient -->
+    <path
+        android:fillColor="#3A86FF"
+        android:pathData="M0,0h260v180h-260z" />
+
+    <path
+        android:fillColor="#7B2CBF"
+        android:fillAlpha="0.55"
+        android:pathData="M0,0h260v180h-260z" />
+
+    <!-- Card Shape -->
+    <path
+        android:fillColor="#6A4CFF"
+        android:pathData="M30,30
+            a20,20 0 0 1 20,-20h160a20,20 0 0 1 20,20v100a20,20 0 0 1 -20,20h-160a20,20 0 0 1 -20,-20z" />
+
+    <!-- Chip (white circle) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M200,45a12,12 0 1 1 -24,0a12,12 0 1 1 24,0" />
+
+    <!-- 3 lines (card details) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M60,85h80v8h-80z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.85"
+        android:pathData="M60,105h50v8h-50z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.65"
+        android:pathData="M60,125h40v8h-40z" />
+
+</vector>

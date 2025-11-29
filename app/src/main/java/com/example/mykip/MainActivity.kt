@@ -12,8 +12,9 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -21,25 +22,20 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.example.mykip.data.UserDatabase
-import com.example.mykip.repository.MahasiswaRepository
-import com.example.mykip.repository.OrangTuaRepository
-import com.example.mykip.repository.RiwayatDanaRepository
-import com.example.mykip.repository.RiwayatDanaViewModelFactory
-import com.example.mykip.repository.UserRepository
+import com.example.mykip.datastore.OnboardingDataStore
+import com.example.mykip.repository.*
 import com.example.mykip.ui.screen.*
 import com.example.mykip.ui.theme.MyKIPTheme
-import com.example.mykip.ui.viewModel.MahasiswaViewModelFactory
-import com.example.mykip.ui.viewModel.UserViewModel
-import com.example.mykip.ui.viewModel.UserViewModelFactory
-import com.example.mykip.viewmodel.MahasiswaViewModel
-import com.example.mykip.viewmodel.RiwayatDanaViewModel
-import com.example.mykip.ui.screen.KelolaDanaScreen
-import com.example.mykip.viewmodel.OrangTuaViewModel
-import com.example.mykip.viewmodel.OrangTuaViewModelFactory
+import com.example.mykip.ui.viewModel.*
+import com.example.mykip.viewmodel.*
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
 
-sealed class BottomNavScreen(val route: String, val title: String, val icon: ImageVector? = null) {
+sealed class BottomNavScreen(
+    val route: String,
+    val title: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector? = null
+) {
     object Home : BottomNavScreen("home", "Home", Icons.Default.Home)
     object Profile : BottomNavScreen("profile", "Profile", Icons.Default.Person)
     object Search : BottomNavScreen("search", "Search", Icons.Default.Search)
@@ -62,39 +58,41 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MyApp() {
     val navController = rememberNavController()
-    val db = Firebase.firestore
     val context = LocalContext.current
-    val database = UserDatabase.getDatabase(context)
-    val viewModel: UserViewModel =
-        viewModel(factory = UserViewModelFactory(UserRepository()))
-    val mahasiswaViewModel: MahasiswaViewModel = viewModel(
-        factory = MahasiswaViewModelFactory(
-            MahasiswaRepository(db)
-        )
-    )
 
-    val riwayatViewModel: RiwayatDanaViewModel = viewModel(
-        factory = RiwayatDanaViewModelFactory(
-            RiwayatDanaRepository(database.riwayatDanaDao())
-        )
-    )
-    val user = viewModel.loggedInUser
+    // 🔥 ONBOARDING DATASTORE
+    val onboardingDataStore = remember { OnboardingDataStore(context) }
+    val isOnboardingCompleted by onboardingDataStore.isCompleted.collectAsState(initial = false)
+
+    val db = Firebase.firestore
+    val database = UserDatabase.getDatabase(context)
+
+    val userViewModel: UserViewModel =
+        viewModel(factory = UserViewModelFactory(UserRepository()))
+
+    val mahasiswaViewModel: MahasiswaViewModel =
+        viewModel(factory = MahasiswaViewModelFactory(MahasiswaRepository(db)))
+
+    val riwayatViewModel: RiwayatDanaViewModel =
+        viewModel(factory = RiwayatDanaViewModelFactory(RiwayatDanaRepository(database.riwayatDanaDao())))
+
+    val orangTuaViewModel: OrangTuaViewModel =
+        viewModel(factory = OrangTuaViewModelFactory(OrangTuaRepository(database.orangTuaDao())))
+
+    val user = userViewModel.loggedInUser
+
     var bottomItems = listOf(
         BottomNavScreen.Home,
         BottomNavScreen.Profile,
     )
-    if(user?.isAdmin == true){
+
+    if (user?.isAdmin == true) {
         bottomItems = listOf(
             BottomNavScreen.Home,
             BottomNavScreen.Profile,
             BottomNavScreen.Search
         )
     }
-
-    val orangTuaRepository = OrangTuaRepository(database.orangTuaDao())
-    val orangTuaViewModel: OrangTuaViewModel = viewModel(
-        factory = OrangTuaViewModelFactory(orangTuaRepository)
-    )
 
     Scaffold(
         bottomBar = {
@@ -103,7 +101,8 @@ fun MyApp() {
             if (
                 route !in listOf(
                     BottomNavScreen.Login.route,
-                    BottomNavScreen.Register.route
+                    BottomNavScreen.Register.route,
+                    "landing"
                 ) &&
                 route?.startsWith("detailAnak/") == false
             ) {
@@ -114,13 +113,31 @@ fun MyApp() {
 
         NavHost(
             navController = navController,
-            startDestination = BottomNavScreen.Login.route,
+            startDestination = if (isOnboardingCompleted) {
+                BottomNavScreen.Login.route
+            } else {
+                "landing"
+            },
             modifier = Modifier.padding(padding)
         ) {
 
+            // ⭐ LANDING PAGE / ONBOARDING
+            composable("landing") {
+                LandingPage(
+                    dataStore = onboardingDataStore,
+                    onFinished = {
+                        navController.navigate(BottomNavScreen.Login.route) {
+                            popUpTo("landing") { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+
+            // ⭐ LOGIN
             composable(BottomNavScreen.Login.route) {
                 LoginScreen(
-                    viewModel = viewModel,
+                    viewModel = userViewModel,
                     onLoginSuccess = {
                         navController.navigate(BottomNavScreen.Home.route) {
                             popUpTo(BottomNavScreen.Login.route) { inclusive = true }
@@ -133,27 +150,29 @@ fun MyApp() {
                 )
             }
 
+            // ⭐ REGISTER
             composable(BottomNavScreen.Register.route) {
                 RegisterScreen(
-                    userViewModel = viewModel,
+                    userViewModel = userViewModel,
                     mahasiswaViewModel = mahasiswaViewModel,
-                    orangTuaViewModel = orangTuaViewModel,   // ← WAJIB ADA
+                    orangTuaViewModel = orangTuaViewModel,
                     onNavigateToLogin = { navController.popBackStack() }
                 )
             }
 
-
+            // ⭐ HOME
             composable(BottomNavScreen.Home.route) {
                 HomeScreen()
             }
 
+            // ⭐ PROFILE
             composable(BottomNavScreen.Profile.route) {
                 ProfileScreen(
-                    viewModel = viewModel,
+                    viewModel = userViewModel,
                     orangTuaViewModel = orangTuaViewModel,
                     navController = navController,
                     onLogout = {
-                        viewModel.logout()
+                        userViewModel.logout()
                         navController.navigate(BottomNavScreen.Login.route) {
                             popUpTo(BottomNavScreen.Home.route) { inclusive = true }
                         }
@@ -161,54 +180,40 @@ fun MyApp() {
                     mahasiswaViewModel = mahasiswaViewModel,
                     riwayatViewModel = riwayatViewModel
                 )
-
             }
 
+            // ⭐ SEARCH (khusus admin)
             composable(BottomNavScreen.Search.route) {
                 DaftarAnakScreen(
                     navController = navController,
-                    userViewModel = viewModel,
+                    userViewModel = userViewModel,
                     mahasiswaViewModel = mahasiswaViewModel,
                     riwayatViewModel = riwayatViewModel
                 )
             }
 
-            composable("daftarAnak") {
-
-                val user = viewModel.loggedInUser
-
-                // If user is NOT ADMIN → block access
-                if (user?.isAdmin != true) {
-                    // Option A: go back
-                    LaunchedEffect(Unit) {
-                        navController.popBackStack()
-                    }
-                    Text("Anda tidak memiliki akses.")  // optional placeholder
-                    return@composable
-                }
-                DaftarAnakScreen(
-                    navController = navController,
-                    userViewModel = viewModel,
-                    mahasiswaViewModel = mahasiswaViewModel,
-                    riwayatViewModel = riwayatViewModel
-                )
-            }
-            composable("kelolaDana"){
-
-
+            // ⭐ KELOLA DANA
+            composable("kelolaDana") {
                 KelolaDanaScreen(
-                     viewModel,
-                    riwayatViewModel,
-                    navController
+                    userViewModel = userViewModel,
+                    riwayatViewModel = riwayatViewModel,
+                    navController = navController
                 )
-
             }
+
+            // ⭐ DETAIL ANAK
             composable(
-                "detailAnak/{anakId}",
+                route = "detailAnak/{anakId}",
                 arguments = listOf(navArgument("anakId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val anakId = backStackEntry.arguments?.getString("anakId") ?: ""
-                DetailAnakScreen(anakId , navController,userViewModel = viewModel, mahasiswaViewModel, riwayatViewModel)
+                DetailAnakScreen(
+                    anakId,
+                    navController,
+                    userViewModel = userViewModel,
+                    mahasiswaViewModel = mahasiswaViewModel,
+                    riwayatViewModel = riwayatViewModel
+                )
             }
         }
     }
@@ -216,22 +221,35 @@ fun MyApp() {
 
 @Composable
 fun BottomBar(navController: NavHostController, items: List<BottomNavScreen>) {
-    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    NavigationBar(
+        containerColor = Color.White,
+        tonalElevation = 12.dp
+    ) {
+        val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
-    NavigationBar {
+
         items.forEach { screen ->
             NavigationBarItem(
-                icon = { Icon(screen.icon!!, contentDescription = screen.title) },
-                label = { Text(screen.title) },
                 selected = currentRoute == screen.route,
                 onClick = {
                     navController.navigate(screen.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                         launchSingleTop = true
                         restoreState = true
                     }
+                },
+                icon = {
+                    Icon(
+                        screen.icon ?: Icons.Default.Home,
+                        contentDescription = screen.title,
+                        tint = if (currentRoute == screen.route) Color(0xFF4F6EF7) else Color.Gray
+                    )
+                },
+                label = {
+                    Text(
+                        screen.title,
+                        color = if (currentRoute == screen.route) Color(0xFF4F6EF7) else Color.Gray
+                    )
                 }
             )
         }

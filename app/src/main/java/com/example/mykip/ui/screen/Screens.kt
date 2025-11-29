@@ -35,12 +35,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,6 +53,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.mykip.BuildConfig
 import com.example.mykip.data.Mahasiswa
 import com.example.mykip.R
+import com.example.mykip.data.FeatureItem
 import com.example.mykip.data.RiwayatDana
 import com.example.mykip.data.contohAnak
 import com.example.mykip.data.riwayatUntuk
@@ -58,85 +62,154 @@ import com.example.mykip.ui.screen.DaftarAnakScreen
 import com.example.mykip.viewmodel.MahasiswaViewModel
 import com.example.mykip.viewmodel.OrangTuaViewModel
 import com.example.mykip.viewmodel.RiwayatDanaViewModel
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 
 
 @Composable
 fun HomeScreen() {
-    Box(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.TopCenter
+            .background(Color(0xFFF7F7F7))
+            .padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(bottom = 20.dp)
     ) {
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
-        ) {
+        item {
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // Logo
-            Image(
-                painter = painterResource(id = R.drawable.logo_ukrida),
-                contentDescription = "Logo Ukrida",
-                modifier = Modifier
-                    .size(140.dp)
-                    .clip(RoundedCornerShape(12.dp)),
-                contentScale = ContentScale.Crop
+            Text(
+                text = "Good Morning,\nGega!",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
             )
 
             Spacer(modifier = Modifier.height(20.dp))
+        }
 
-            // Nama aplikasi
-            Text(
-                text = "Sistem Manajemen Dana KIP",
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.Bold
-                ),
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Deskripsi singkat aplikasi
-            Text(
-                text = "Aplikasi ini membantu mahasiswa penerima KIP dalam mengelola pencairan dana, memantau penggunaan dana, serta memastikan transparansi dan akuntabilitas.",
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 12.dp)
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // Card fitur
+        item {
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(8.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "Fitur Utama",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                listOf(
+                                    Color(0xFF304FFE),
+                                    Color(0xFF00BCD4),
+                                    Color(0xFF4CAF50)
+                                )
+                            )
                         )
-                    )
+                        .padding(20.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "Gega Smith",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                        Text(
+                            text = "OverBridge Expert",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = Color.White)
+                        )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(18.dp))
 
-                    FeatureItem("• Melihat jadwal pencairan dana KIP")
-                    FeatureItem("• Melihat riwayat transaksi dana KIP")
-                    FeatureItem("• Melacak penggunaan dana per semester")
-                    FeatureItem("• Mengunggah bukti penggunaan dana")
-                    FeatureItem("• Notifikasi informasi pencairan terbaru")
+                        Text("4756 •••• •••• 9018", color = Color.White)
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = "$3,469.52",
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(30.dp))
+        }
+
+        item {
+            // Grid tidak scroll sendiri → aman
+            FeatureGrid()
+        }
+    }
+}
+
+
+
+@Composable
+fun FeatureGrid() {
+    val features = listOf(
+        FeatureItem("Account and Card", R.drawable.ic_account, Color(0xFF3E57FF)),
+        FeatureItem("Transfer", R.drawable.ic_transfer, Color(0xFFFF3366)),
+        FeatureItem("Withdraw", R.drawable.ic_atm, Color(0xFF008CFF)),
+        FeatureItem("Mobile recharge", R.drawable.ic_mobile, Color(0xFFFFA833)),
+        FeatureItem("Pay the bill", R.drawable.ic_bill, Color(0xFF00B894)),
+        FeatureItem("Credit card", R.drawable.ic_creditcard, Color(0xFFFF6B3D)),
+        FeatureItem("Transaction report", R.drawable.ic_report, Color(0xFF6C5CE7))
+    )
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(3),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 2000.dp),   // ✔ menetapkan batas tinggi
+        verticalArrangement = Arrangement.spacedBy(18.dp),
+        horizontalArrangement = Arrangement.spacedBy(18.dp),
+        contentPadding = PaddingValues(bottom = 80.dp)
+    ) {
+        items(features) { item ->
+            Column(
+                modifier = Modifier
+                    .background(Color.White, shape = RoundedCornerShape(18.dp))
+                    .padding(vertical = 18.dp, horizontal = 12.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(50.dp)
+                        .background(item.color.copy(alpha = 0.15f), RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = item.icon),
+                        contentDescription = item.title,
+                        tint = item.color,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    color = Color.Black
+                )
             }
         }
     }
 }
+
 
 // Item bullet point
 @Composable
