@@ -21,8 +21,3 @@ fun contohAnak(): List<Anak> = listOf(
     )
 )
 
-fun riwayatUntuk(id: String): List<RiwayatDana> = listOf(
-    RiwayatDana(0, "412022005", "2025-01-02",  false,150000, "Beli susu"),
-    RiwayatDana(1, "1234", "2025-01-04",  true,200000, "1"),
-    RiwayatDana(2, "2424", "2025-01-10",  false,150000, "2")
-)

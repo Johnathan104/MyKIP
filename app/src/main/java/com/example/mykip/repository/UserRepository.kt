@@ -18,7 +18,7 @@ class UserRepository {
         nim: String,
         email: String,
         password: String,
-        isMahasiswa: Boolean,
+        role: String,
         callback: (User?, String?) -> Unit
     ) {
         auth.createUserWithEmailAndPassword(email, password)
@@ -28,11 +28,11 @@ class UserRepository {
 
                 val user = User(
                     uid = uid,
-                    nim = if (isMahasiswa) nim else "",
+                    nim = if (role=="mahasiswa") nim else "",
                     email = email,
                     password = password,
                     balance = 0,
-                    isAdmin = false
+                    role = role
                 )
 
                 usersRef.document(uid)

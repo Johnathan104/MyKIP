@@ -5,7 +5,7 @@ import com.example.mykip.data.OrangTuaDao
 import com.example.mykip.data.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-class OrangTuaRepository(private val dao: OrangTuaDao) {
+class OrangTuaRepository() {
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 
@@ -61,9 +61,5 @@ class OrangTuaRepository(private val dao: OrangTuaDao) {
                     .addOnFailureListener { callback(null, it.message) }
             }
             .addOnFailureListener { callback(null, it.message) }
-    }
-
-    suspend fun getOrangTuaByEmail(email: String): OrangTua? {
-        return dao.getByEmail(email)
     }
 }

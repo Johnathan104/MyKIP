@@ -63,10 +63,9 @@ fun DaftarAnakScreen(
     // Recompute anakList whenever mahasiswaList, userList, or riwayatList changes
     LaunchedEffect(mahasiswaList, userList, riwayatList) {
         if (mahasiswaList.isNotEmpty() && userList.isNotEmpty()) {
-
             val mahasiswaNonAdmin = mahasiswaList.filter { mhs ->
                 val tiedUser = userList.find { it.nim == mhs.nim }
-                tiedUser?.isAdmin == false
+                tiedUser?.role == "admin"
             }
 
             anakList = mahasiswaNonAdmin.map { mhs ->

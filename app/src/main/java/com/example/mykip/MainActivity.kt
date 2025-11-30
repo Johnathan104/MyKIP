@@ -21,7 +21,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
-import com.example.mykip.data.UserDatabase
+
 import com.example.mykip.datastore.OnboardingDataStore
 import com.example.mykip.repository.*
 import com.example.mykip.ui.screen.*
@@ -65,7 +65,6 @@ fun MyApp() {
     val isOnboardingCompleted by onboardingDataStore.isCompleted.collectAsState(initial = false)
 
     val db = Firebase.firestore
-    val database = UserDatabase.getDatabase(context)
 
     val userViewModel: UserViewModel =
         viewModel(factory = UserViewModelFactory(UserRepository()))
@@ -74,10 +73,10 @@ fun MyApp() {
         viewModel(factory = MahasiswaViewModelFactory(MahasiswaRepository(db)))
 
     val riwayatViewModel: RiwayatDanaViewModel =
-        viewModel(factory = RiwayatDanaViewModelFactory(RiwayatDanaRepository(database.riwayatDanaDao())))
+        viewModel(factory = RiwayatDanaViewModelFactory(RiwayatDanaRepository(db)))
 
     val orangTuaViewModel: OrangTuaViewModel =
-        viewModel(factory = OrangTuaViewModelFactory(OrangTuaRepository(database.orangTuaDao())))
+        viewModel(factory = OrangTuaViewModelFactory(OrangTuaRepository()))
 
     val user = userViewModel.loggedInUser
 
@@ -85,8 +84,8 @@ fun MyApp() {
         BottomNavScreen.Home,
         BottomNavScreen.Profile,
     )
-
-    if (user?.isAdmin == true) {
+    val isAdmin = user?.role=="admin"
+    if (isAdmin == true) {
         bottomItems = listOf(
             BottomNavScreen.Home,
             BottomNavScreen.Profile,
@@ -143,7 +142,6 @@ fun MyApp() {
                             popUpTo(BottomNavScreen.Login.route) { inclusive = true }
                         }
                     },
-                    orangTuaViewModel = orangTuaViewModel,
                     onNavigateToRegister = {
                         navController.navigate(BottomNavScreen.Register.route)
                     }
@@ -162,7 +160,7 @@ fun MyApp() {
 
             // ⭐ HOME
             composable(BottomNavScreen.Home.route) {
-                HomeScreen()
+                HomeScreen(navController)
             }
 
             // ⭐ PROFILE

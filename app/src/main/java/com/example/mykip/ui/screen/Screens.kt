@@ -56,7 +56,6 @@ import com.example.mykip.R
 import com.example.mykip.data.FeatureItem
 import com.example.mykip.data.RiwayatDana
 import com.example.mykip.data.contohAnak
-import com.example.mykip.data.riwayatUntuk
 import com.example.mykip.ui.viewModel.UserViewModel
 import com.example.mykip.ui.screen.DaftarAnakScreen
 import com.example.mykip.viewmodel.MahasiswaViewModel
@@ -69,7 +68,7 @@ import androidx.compose.material.icons.filled.Visibility
 
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(navController:NavController) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -148,7 +147,7 @@ fun HomeScreen() {
 
         item {
             // Grid tidak scroll sendiri → aman
-            FeatureGrid()
+            FeatureGrid(navController)
         }
     }
 }
@@ -156,7 +155,7 @@ fun HomeScreen() {
 
 
 @Composable
-fun FeatureGrid() {
+fun FeatureGrid(navController:NavController) {
     val features = listOf(
         FeatureItem("Account and Card", R.drawable.ic_account, Color(0xFF3E57FF)),
         FeatureItem("Transfer", R.drawable.ic_transfer, Color(0xFFFF3366)),
@@ -164,7 +163,7 @@ fun FeatureGrid() {
         FeatureItem("Mobile recharge", R.drawable.ic_mobile, Color(0xFFFFA833)),
         FeatureItem("Pay the bill", R.drawable.ic_bill, Color(0xFF00B894)),
         FeatureItem("Credit card", R.drawable.ic_creditcard, Color(0xFFFF6B3D)),
-        FeatureItem("Transaction report", R.drawable.ic_report, Color(0xFF6C5CE7))
+        FeatureItem("Transaction report", R.drawable.ic_report, Color(0xFF6C5CE7), destination = "kelolaDana")
     )
 
     LazyVerticalGrid(
@@ -177,11 +176,17 @@ fun FeatureGrid() {
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
         items(features) { item ->
+
             Column(
                 modifier = Modifier
                     .background(Color.White, shape = RoundedCornerShape(18.dp))
                     .padding(vertical = 18.dp, horizontal = 12.dp)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .clickable{
+                        if(item.destination != ""){
+                            navController.navigate(item.destination)
+                        }
+                    },
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Box(
@@ -207,6 +212,8 @@ fun FeatureGrid() {
                     color = Color.Black
                 )
             }
+
+
         }
     }
 }
@@ -214,7 +221,7 @@ fun FeatureGrid() {
 
 // Item bullet point
 @Composable
-fun FeatureItem(text: String) {
+fun FeatureItem(text: String, destination:String = "") {
     Text(
         text = text,
         style = MaterialTheme.typography.bodyMedium,
@@ -232,79 +239,61 @@ fun ProfileScreen(
     onLogout: () -> Unit
 ) {
     val user = viewModel.loggedInUser
-    val orangTua = orangTuaViewModel.loggedInOrtu
-    val mahasiswa = mahasiswaViewModel.mahasiswa
 
     // ======================================
     // DETECT ROLE
     // ======================================
-    val isOrtu = orangTua != null
-    val isAdmin = user?.isAdmin == true
-    val isMahasiswa = user != null && !isAdmin
+    val isOrtu = user?.role == "orangTua"
+    val isAdmin = user?.role == "admin"
+    val isMahasiswa = user?.role =="mahasiswa"
 
     // ======================================
     // LOAD DATA
     // ======================================
     var mahasiswaList by remember { mutableStateOf(emptyList<Mahasiswa>()) }
-    var riwayatList by remember { mutableStateOf(emptyList<RiwayatDana>()) }
+//    var riwayatList by remember { mutableStateOf(emptyList<RiwayatDana>()) }
     var currentMahasiswa by remember { mutableStateOf<Mahasiswa?>(null) }
 
     LaunchedEffect(Unit) {
         // ambil semua mahasiswa
         mahasiswaViewModel.getAll { mahasiswaList = it }
-
-        if (isMahasiswa) {
-            // Mahasiswa → ambil berdasarkan nim user
-            mahasiswaViewModel.getByNim(user!!.nim) { mhs ->
-                currentMahasiswa = mhs
-            }
-
-            riwayatViewModel.getByNim(user!!.nim) {
-                riwayatList = it
-            }
+        // Mahasiswa → ambil berdasarkan nim user
+        mahasiswaViewModel.getByNim(user!!.nim) { mhs ->
+            currentMahasiswa = mhs
         }
 
-        if (isOrtu) {
-            // Orang tua → ambil berdasarkan anakNim
-            mahasiswaViewModel.getByNim(orangTua!!.anakNim) { mhs ->
-                currentMahasiswa = mhs
-            }
+//        riwayatViewModel.getByNim(user!!.nim) {
+//            riwayatList = it
+//        }
 
-            riwayatViewModel.getByNim(orangTua!!.anakNim) {
-                riwayatList = it
-            }
-        }
     }
 
 
     val jumlahAnak = mahasiswaList.size
-    val transaksiMasuk = riwayatList.count { it.goingIn }
-    val transaksiKeluar = riwayatList.count { !it.goingIn }
+//    val transaksiMasuk = riwayatList.count { it.goingIn }
+//    val transaksiKeluar = riwayatList.count { !it.goingIn }
 
     val displayedNim =
         when {
-            isMahasiswa -> user!!.nim
-            isOrtu -> orangTua!!.anakNim
+            isMahasiswa -> user!!.nim?: "-"
             else -> "-"
         }
 
     val displayedEmail =
         when {
-            isMahasiswa -> user!!.email
-            isOrtu -> orangTua!!.email
+            isMahasiswa -> user!!.email?: "-"
             else -> "-"
         }
 
     val displayedNama =
         when {
-            isMahasiswa -> mahasiswa!!.nama
-            isOrtu -> orangTua!!.nama
+            isMahasiswa -> currentMahasiswa?.nama ?: "-"
             else -> "-"
         }
 
     val displayedNamaAnak =
         when {
-            isMahasiswa -> currentMahasiswa?.nama ?: "-"
+//            isMahasiswa -> currentMahasiswa?.nama ?: "-"
             isOrtu -> currentMahasiswa?.nama ?: "-"
             else -> "-"
         }
@@ -459,9 +448,11 @@ fun ProfileScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // ====== FIELD NAME ======
-        Text("Name", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-        ReadOnlyField(displayedNama)
-        Spacer(modifier = Modifier.height(14.dp))
+        if(isMahasiswa){
+            Text("Name", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            ReadOnlyField(displayedNama)
+            Spacer(modifier = Modifier.height(14.dp))
+        }
 
         // ====== FIELD EMAIL ======
         Text("E-mail", fontSize = 14.sp, fontWeight = FontWeight.Medium)
@@ -473,8 +464,10 @@ fun ProfileScreen(
         ReadOnlyField(displayedNim)
 
         // ===== Nama Anak =====
-        Text("Nama Anak", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-        ReadOnlyField(displayedNamaAnak)
+        if(isOrtu){
+            Text("Nama Anak", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            ReadOnlyField(displayedNamaAnak)
+        }
         Spacer(modifier = Modifier.height(14.dp))
 
         Spacer(modifier = Modifier.height(32.dp))

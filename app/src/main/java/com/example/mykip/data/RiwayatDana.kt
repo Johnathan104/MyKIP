@@ -2,14 +2,13 @@ package com.example.mykip.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.google.firebase.Timestamp
 
-@Entity(tableName = "tbl_dana")
 data class RiwayatDana(
-    @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val nim: String,
-    val tanggal: String,
-    val goingIn: Boolean,
-    val jumlah: Int,
-    val keterangan: String
+    val nim: String="",
+    val tanggal: Timestamp = Timestamp.now(),
+    val goingIn: Boolean=false,
+    val jumlah: Int=0,
+    val keterangan: String=""
 )

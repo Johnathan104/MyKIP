@@ -29,6 +29,7 @@ import com.example.mykip.R
 import com.example.mykip.data.RiwayatDana
 import com.example.mykip.ui.viewModel.UserViewModel
 import com.example.mykip.viewmodel.RiwayatDanaViewModel
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.time.delay
 import java.text.SimpleDateFormat
@@ -42,9 +43,8 @@ fun KelolaDanaScreen(
     riwayatViewModel: RiwayatDanaViewModel,
     navController: NavController
 ) {
-    fun getTodayDate(): String {
-        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        return sdf.format(Date())
+    fun getTodayDate(): Timestamp {
+        return Timestamp(Date()) // Create a new Timestamp from the current Date
     }
     val user = userViewModel.loggedInUser
     val nim = user?.nim ?: return
@@ -72,11 +72,12 @@ fun KelolaDanaScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(18.dp)
+            .padding(36.dp)
+            .padding(top = 80.dp)
     ) {
 
         Text(
-            text = "Manajemen Dana KIP - $nim",
+            text = "Transaction Report",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )

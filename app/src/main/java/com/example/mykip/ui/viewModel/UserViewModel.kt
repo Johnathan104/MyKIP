@@ -87,9 +87,9 @@ class UserViewModel(
     }
 
     // LOGIN (nim + password → convert to email internally)
-    fun login(nim: String, password: String) {
-        if (nim.isBlank() || password.isBlank()) {
-            uiState = UiState(false, false, "NIM and Password cannot be empty")
+    fun login(email: String, password: String) {
+        if (email.isBlank() || password.isBlank()) {
+            uiState = UiState(false, false, "Email and Password cannot be empty")
             return
         }
 
@@ -98,8 +98,7 @@ class UserViewModel(
 
             // find user by NIM
             val snap = db.collection("users")
-                .whereEqualTo("nim", nim)
-                .whereEqualTo("password", password)
+                .whereEqualTo("email", email)
                 .get()
                 .await()
 
@@ -130,7 +129,8 @@ class UserViewModel(
     ) {
         viewModelScope.launch {
             val admin = loggedInUser
-            if (admin?.isAdmin != true) return@launch
+            val isAdmin = admin?.role =="admin"
+            if (isAdmin != true) return@launch
 
             val snap = db.collection("users")
                 .whereEqualTo("nim", nim)
@@ -197,8 +197,10 @@ class UserViewModel(
         nim: String,
         email: String,
         password: String,
-        isMahasiswa: Boolean
+        role: String
     ) {
+        val isMahasiswa = role == "mahasiswa"
+
         if (isMahasiswa && (nim.isBlank() || email.isBlank() || password.isBlank())) {
             uiState = UiState(false, false, "All fields are required (Mahasiswa)")
             return
@@ -217,13 +219,14 @@ class UserViewModel(
                 val authResult = auth.createUserWithEmailAndPassword(email, password).await()
                 val uid = authResult.user!!.uid
 
+
                 val newUser = User(
                     uid = uid,
-                    nim = if (isMahasiswa) nim else "",
+                    nim = nim,
                     email = email,
-                    password = password,
+                    password = "-",
                     balance = 0,
-                    isAdmin = false
+                    role = role
                 )
 
                 db.collection("users").document(uid).set(newUser).await()
@@ -236,6 +239,7 @@ class UserViewModel(
             }
         }
     }
+
 
     // LOGOUT
     fun logout() {

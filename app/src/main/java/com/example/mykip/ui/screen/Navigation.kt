@@ -8,7 +8,6 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.mykip.data.UserDatabase
 import com.example.mykip.repository.OrangTuaRepository
 import com.example.mykip.ui.screen.LoginScreen
 import com.example.mykip.ui.screen.RegisterScreen
@@ -26,10 +25,9 @@ fun AppNavigation(
 ) {
     // INIT DATABASE
     val context = navController.context
-    val database = UserDatabase.getDatabase(context)
 
     // INIT REPOSITORY
-    val orangTuaRepository = OrangTuaRepository(database.orangTuaDao())
+    val orangTuaRepository = OrangTuaRepository()
 
     // INIT VIEWMODEL
     val orangTuaViewModel: OrangTuaViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
@@ -51,7 +49,6 @@ fun AppNavigation(
             LoginScreen(
                 viewModel,
                 onLoginSuccess = {},
-                orangTuaViewModel = orangTuaViewModel,
                 onNavigateToRegister = { navController.navigate("register") }
             )
         }

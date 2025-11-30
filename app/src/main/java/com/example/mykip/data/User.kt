@@ -12,5 +12,5 @@ data class User(
     val email: String = "",
     val password: String = "",
     val balance: Int = 0,
-    val isAdmin: Boolean = false,
+    val role:String = "",
 )

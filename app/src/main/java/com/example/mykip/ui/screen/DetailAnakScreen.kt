@@ -16,6 +16,7 @@ import com.example.mykip.data.*
 import com.example.mykip.ui.viewModel.UserViewModel
 import com.example.mykip.viewmodel.MahasiswaViewModel
 import com.example.mykip.viewmodel.RiwayatDanaViewModel
+import com.google.firebase.Timestamp
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -29,9 +30,8 @@ fun DetailAnakScreen(
     mahasiswaViewModel: MahasiswaViewModel,
     riwayatViewModel: RiwayatDanaViewModel
 ) {
-    fun getTodayDate(): String {
-        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        return sdf.format(Date())
+    fun getTodayDate(): Timestamp {
+        return Timestamp(Date()) // Create a new Timestamp from the current Date
     }
     var mahasiswa by remember { mutableStateOf<Mahasiswa?>(null) }
     var riwayatList by remember { mutableStateOf<List<RiwayatDana>>(emptyList()) }
@@ -127,7 +127,7 @@ fun DetailAnakScreen(
                                 ) {
 
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(item.tanggal, fontWeight = FontWeight.Bold)
+                                        Text(item.tanggal.toDate().toString(), fontWeight = FontWeight.Bold)
                                         Text("Jumlah: Rp ${item.jumlah}")
                                         Text("Tipe: ${if (item.goingIn) "Pemasukan" else "Pengeluaran"}")
                                         Text("Keterangan: ${item.keterangan}")

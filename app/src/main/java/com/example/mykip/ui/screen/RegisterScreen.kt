@@ -253,7 +253,7 @@ fun RegisterScreen(
                                     nim = nim,
                                     email = email,
                                     password = password,
-                                    isMahasiswa = isMahasiswa
+                                    role = "mahasiswa"
                                 )
                                 mahasiswaViewModel.insert(
                                     Mahasiswa(
@@ -267,11 +267,11 @@ fun RegisterScreen(
                                     )
                                 )
                             } else {
-                                orangTuaViewModel.insert(
-                                    nama = nama,
+                                userViewModel.register(
+                                    nim = nim,
                                     email = email,
                                     password = password,
-                                    anakNim = nim
+                                    role = "orangTua"
                                 )
                             }
 

@@ -34,7 +34,4 @@ interface UserDao {
     @Query("UPDATE tbl_users SET balance = :balance WHERE nim = :nim")
     suspend fun updateBalance(nim: String, balance: Int)
 
-    // ➕ Tambahkan ini
-    @Query("UPDATE tbl_users SET isAdmin = :isAdmin WHERE nim = :nim")
-    suspend fun setAdmin(nim: String, isAdmin: Boolean)
 }

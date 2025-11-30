@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.mykip.data.Mahasiswa
 import com.example.mykip.data.RiwayatDana
 import com.example.mykip.repository.RiwayatDanaRepository
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -15,9 +16,8 @@ import java.util.Locale
 class RiwayatDanaViewModel(
     private val repository: RiwayatDanaRepository
 ) : ViewModel() {
-    fun getTodayDate(): String {
-        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        return sdf.format(Date())
+    fun getTodayDate(): Timestamp {
+        return Timestamp(Date()) // Create a new Timestamp from the current Date
     }
     private val _riwayatList = MutableStateFlow<List<RiwayatDana>>(emptyList())
     val riwayatList: StateFlow<List<RiwayatDana>> = _riwayatList

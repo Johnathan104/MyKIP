@@ -1,6 +1,8 @@
 package com.example.mykip.ui.screen
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
@@ -13,38 +15,68 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.mykip.data.RiwayatDana
+import java.text.SimpleDateFormat
+import java.util.Locale
+import kotlin.text.format
 
 @Composable
 fun RiwayatItem(item: RiwayatDana) {
+
+    // Format date (e.g., 15 January 2025, 13:22)
+    val formatter = SimpleDateFormat("dd MMMM yyyy, HH:mm", Locale.getDefault())
+    val formattedDate = formatter.format(item.tanggal.toDate())
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(4.dp)
+        modifier = Modifier
+            .fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(3.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
 
-            Text(
-                text = item.tanggal,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
-            )
+            // LEFT SIDE — Description + Status
+            Column(modifier = Modifier.weight(1f)) {
 
-            Text(
-                text = "Rp ${item.jumlah}",
-                style = MaterialTheme.typography.bodyLarge
-            )
-
-            Text(
-                text = if (item.goingIn) "Dana Masuk" else "Dana Keluar",
-                color = if (item.goingIn) Color(0xFF2E7D32) else Color(0xFFC62828),
-                fontWeight = FontWeight.SemiBold
-            )
-
-            if (item.keterangan.isNotEmpty()) {
+                // Keterangan as title
                 Text(
-                    text = item.keterangan,
-                    style = MaterialTheme.typography.bodyMedium
+                    text = if (item.keterangan.isNotEmpty()) item.keterangan else "No description",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                // Show "Successfully" only if goingOut (expense)
+                if (!item.goingIn) {
+                    Text(
+                        text = "Successfully",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
+
+                // Date below
+                Text(
+                    text = formattedDate,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
                 )
             }
+
+            // RIGHT SIDE — Amount
+            val amountColor =
+                if (item.goingIn) Color(0xFF304FFE)      // Blue like your screenshot
+                else Color(0xFFC62828)                   // Red
+
+            Text(
+                text = (if (item.goingIn) "+ " else "- ") + "Rp ${item.jumlah}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = amountColor
+            )
         }
     }
 }
