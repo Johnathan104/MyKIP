@@ -68,7 +68,73 @@ import androidx.compose.material.icons.filled.Visibility
 
 
 @Composable
-fun HomeScreen(navController:NavController) {
+fun HomeScreen(
+    navController:NavController,
+    viewModel: UserViewModel,
+    orangTuaViewModel: OrangTuaViewModel,
+    mahasiswaViewModel: MahasiswaViewModel,
+    riwayatViewModel: RiwayatDanaViewModel,)
+{
+    val user = viewModel.loggedInUser
+
+    val isOrtu = user?.role == "orangTua"
+    val isAdmin = user?.role == "admin"
+    val isMahasiswa = user?.role =="mahasiswa"
+
+    // ======================================
+    // LOAD DATA
+    // ======================================
+    var mahasiswaList by remember { mutableStateOf(emptyList<Mahasiswa>()) }
+    var riwayatList by remember { mutableStateOf(emptyList<RiwayatDana>()) }
+    var currentMahasiswa by remember { mutableStateOf<Mahasiswa?>(null) }
+
+    LaunchedEffect(Unit) {
+        // ambil semua mahasiswa
+        mahasiswaViewModel.getAll { mahasiswaList = it }
+        // Mahasiswa → ambil berdasarkan nim user
+        mahasiswaViewModel.getByNim(user!!.nim) { mhs ->
+            currentMahasiswa = mhs
+        }
+
+        riwayatViewModel.getByNim(user!!.nim) {
+            riwayatList = it
+        }
+
+    }
+
+    val jumlahAnak = mahasiswaList.size
+    val transaksiMasuk = riwayatList.count { it.goingIn }
+    val transaksiKeluar = riwayatList.count { !it.goingIn }
+
+    val displayedNama = when {
+        isMahasiswa -> currentMahasiswa?.nama ?: "-"
+        isOrtu -> user?.nama ?: "-"       // Nama orang tua
+        isAdmin -> user?.nama ?: "-"
+        else -> "-"
+    }
+
+    val displayedEmail = user?.email ?: "-"
+
+    val displayedNim = when {
+        isMahasiswa -> user?.nim ?: "-"   // NIM mahasiswa
+        isAdmin -> user?.nim ?: "-"       // Admin boleh melihat NIM user
+        else -> "-"                       // Ortu tidak pakai NIM pribadi
+    }
+
+    val displayedNimAnak = when {
+        isOrtu -> currentMahasiswa?.nim ?: "-"   // NIM anak
+        else -> "-"                              // Mahasiswa & admin tidak tampil NIM anak
+    }
+
+    val displayedRole = when {
+        isOrtu -> "Orang Tua"
+        isAdmin -> "Admin"
+        else -> "Mahasiswa"
+    }
+
+    val totalSaldo =
+        if (isMahasiswa) "Rp. ${user!!.balance}" else "-"
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -77,11 +143,12 @@ fun HomeScreen(navController:NavController) {
         contentPadding = PaddingValues(bottom = 20.dp)
     ) {
 
+
         item {
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Good Morning,\nGega!",
+                text = "KIPKu",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
@@ -114,25 +181,25 @@ fun HomeScreen(navController:NavController) {
                 ) {
                     Column {
                         Text(
-                            text = "Gega Smith",
+                            text = displayedNama,
                             style = MaterialTheme.typography.titleLarge.copy(
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
                             )
                         )
                         Text(
-                            text = "OverBridge Expert",
+                            text = displayedRole,
                             style = MaterialTheme.typography.bodyMedium.copy(color = Color.White)
                         )
 
                         Spacer(modifier = Modifier.height(18.dp))
 
-                        Text("4756 •••• •••• 9018", color = Color.White)
+                        Text("Total Saldo", color = Color.White)
 
                         Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
-                            text = "$3,469.52",
+                            text = totalSaldo,
                             style = MaterialTheme.typography.headlineSmall.copy(
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
@@ -273,37 +340,32 @@ fun ProfileScreen(
 //    val transaksiMasuk = riwayatList.count { it.goingIn }
 //    val transaksiKeluar = riwayatList.count { !it.goingIn }
 
-    val displayedNim =
-        when {
-            isMahasiswa -> user!!.nim?: "-"
-            else -> "-"
-        }
+    val displayedNama = when {
+        isMahasiswa -> currentMahasiswa?.nama ?: "-"
+        isOrtu -> user?.nama ?: "-"       // Nama orang tua
+        isAdmin -> user?.nama ?: "-"
+        else -> "-"
+    }
 
-    val displayedEmail =
-        when {
-            isMahasiswa -> user!!.email?: "-"
-            else -> "-"
-        }
+    val displayedEmail = user?.email ?: "-"
 
-    val displayedNama =
-        when {
-            isMahasiswa -> currentMahasiswa?.nama ?: "-"
-            else -> "-"
-        }
+    val displayedNim = when {
+        isMahasiswa -> user?.nim ?: "-"   // NIM mahasiswa
+        isAdmin -> user?.nim ?: "-"       // Admin boleh melihat NIM user
+        else -> "-"                       // Ortu tidak pakai NIM pribadi
+    }
 
-    val displayedNamaAnak =
-        when {
-//            isMahasiswa -> currentMahasiswa?.nama ?: "-"
-            isOrtu -> currentMahasiswa?.nama ?: "-"
-            else -> "-"
-        }
+    val displayedNimAnak = when {
+        isOrtu -> currentMahasiswa?.nim ?: "-"   // NIM anak
+        else -> "-"                              // Mahasiswa & admin tidak tampil NIM anak
+    }
 
-    val displayedRole =
-        when {
-            isOrtu -> "Orang Tua"
-            isAdmin -> "Admin"
-            else -> "Mahasiswa"
-        }
+    val displayedRole = when {
+        isOrtu -> "Orang Tua"
+        isAdmin -> "Admin"
+        else -> "Mahasiswa"
+    }
+
 
     val totalSaldo =
         if (isMahasiswa) "Rp. ${user!!.balance}" else "-"
@@ -447,27 +509,45 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ====== FIELD NAME ======
-        if(isMahasiswa){
-            Text("Name", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            ReadOnlyField(displayedNama)
-            Spacer(modifier = Modifier.height(14.dp))
+        if (isMahasiswa) {
+            Text("Name"); ReadOnlyField(displayedNama)
+            Spacer(Modifier.height(14.dp))
+
+            Text("E-mail"); ReadOnlyField(displayedEmail)
+            Spacer(Modifier.height(14.dp))
+
+            Text("NIM"); ReadOnlyField(displayedNim)
+            Spacer(Modifier.height(14.dp))
+
+            Text("Role"); ReadOnlyField(displayedRole)
         }
 
-        // ====== FIELD EMAIL ======
-        Text("E-mail", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-        ReadOnlyField(displayedEmail)
-        Spacer(modifier = Modifier.height(14.dp))
+        if (isOrtu) {
+            Text("Name"); ReadOnlyField(displayedNama)
+            Spacer(Modifier.height(14.dp))
 
-        // ====== FIELD ADDRESS ======
-        Text("Nim anak", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-        ReadOnlyField(displayedNim)
+            Text("E-mail"); ReadOnlyField(displayedEmail)
+            Spacer(Modifier.height(14.dp))
 
-        // ===== Nama Anak =====
-        if(isOrtu){
-            Text("Nama Anak", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            ReadOnlyField(displayedNamaAnak)
+            Text("NIM Anak"); ReadOnlyField(displayedNimAnak)
+            Spacer(Modifier.height(14.dp))
+
+            Text("Role"); ReadOnlyField(displayedRole)
         }
+
+        if (isAdmin) {
+            Text("Name"); ReadOnlyField(displayedNama)
+            Spacer(Modifier.height(14.dp))
+
+            Text("E-mail"); ReadOnlyField(displayedEmail)
+            Spacer(Modifier.height(14.dp))
+
+            Text("NIM"); ReadOnlyField(displayedNim)
+            Spacer(Modifier.height(14.dp))
+
+            Text("Role"); ReadOnlyField(displayedRole)
+        }
+
         Spacer(modifier = Modifier.height(14.dp))
 
         Spacer(modifier = Modifier.height(32.dp))

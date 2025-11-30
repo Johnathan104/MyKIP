@@ -65,7 +65,7 @@ fun DaftarAnakScreen(
         if (mahasiswaList.isNotEmpty() && userList.isNotEmpty()) {
             val mahasiswaNonAdmin = mahasiswaList.filter { mhs ->
                 val tiedUser = userList.find { it.nim == mhs.nim }
-                tiedUser?.role == "admin"
+                tiedUser?.role == "mahasiswa"
             }
 
             anakList = mahasiswaNonAdmin.map { mhs ->

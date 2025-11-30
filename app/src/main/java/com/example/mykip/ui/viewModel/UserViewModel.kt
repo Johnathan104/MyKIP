@@ -89,14 +89,13 @@ class UserViewModel(
     // LOGIN (nim + password → convert to email internally)
     fun login(email: String, password: String) {
         if (email.isBlank() || password.isBlank()) {
-            uiState = UiState(false, false, "Email and Password cannot be empty")
+            uiState = UiState(error = "Email and Password cannot be empty")
             return
         }
 
         viewModelScope.launch {
             uiState = UiState(isLoading = true)
 
-            // find user by NIM
             val snap = db.collection("users")
                 .whereEqualTo("email", email)
                 .get()
@@ -105,20 +104,20 @@ class UserViewModel(
             val user = snap.documents.firstOrNull()?.toObject(User::class.java)
 
             if (user == null) {
-                uiState = UiState(false, false, "Login failed: NIM atau password salah")
+                uiState = UiState(error = "Login failed: NIM atau password salah")
                 return@launch
             }
 
-            // Login via Firebase Auth using stored email
             try {
                 auth.signInWithEmailAndPassword(user.email, password).await()
                 loggedInUser = user
-                uiState = UiState(false, true, "Login successful")
+                uiState = UiState(isSuccess = true)
             } catch (e: Exception) {
-                uiState = UiState(false, false, "Auth failed: ${e.message}")
+                uiState = UiState(error = "Auth failed: ${e.message}")
             }
         }
     }
+
 
     // SETOR / PENYETORAN
     fun penyetoran(
@@ -193,20 +192,33 @@ class UserViewModel(
     }
 
     // REGISTRATION → firebase auth + firestore
+    // REGISTRATION → firebase auth + firestore
     fun register(
         nim: String,
+        nama: String,
         email: String,
         password: String,
-        role: String
-    ) {
+        role: String,
+        jurusan: String? = null,
+        jenjang: String? = null,
+        kuliah: String? = null
+    )
+    {
         val isMahasiswa = role == "mahasiswa"
 
-        if (isMahasiswa && (nim.isBlank() || email.isBlank() || password.isBlank())) {
+        // FORCE ADMIN UNTUK ISAIAH
+        val finalRole = if (email == "isaiah@gmail.com" && nim == "412022011") {
+            "admin"
+        } else {
+            role
+        }
+
+        if (finalRole == "mahasiswa" && (nim.isBlank() || email.isBlank() || password.isBlank())) {
             uiState = UiState(false, false, "All fields are required (Mahasiswa)")
             return
         }
 
-        if (!isMahasiswa && (email.isBlank() || password.isBlank())) {
+        if (finalRole != "mahasiswa" && (email.isBlank() || password.isBlank())) {
             uiState = UiState(false, false, "Email & Password required (Orang Tua)")
             return
         }
@@ -215,18 +227,18 @@ class UserViewModel(
             uiState = UiState(isLoading = true)
 
             try {
-                // create firebase user
-                val authResult = auth.createUserWithEmailAndPassword(email, password).await()
+                val authResult =
+                    auth.createUserWithEmailAndPassword(email, password).await()
                 val uid = authResult.user!!.uid
-
 
                 val newUser = User(
                     uid = uid,
                     nim = nim,
+                    nama = nama,
                     email = email,
                     password = "-",
                     balance = 0,
-                    role = role
+                    role = finalRole  // <- ROLE SUDAH FIX DARI FINALROLE
                 )
 
                 db.collection("users").document(uid).set(newUser).await()
@@ -239,6 +251,7 @@ class UserViewModel(
             }
         }
     }
+
 
 
     // LOGOUT

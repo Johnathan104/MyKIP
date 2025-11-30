@@ -49,28 +49,40 @@ fun LoginScreen(
     var showSuccess by remember { mutableStateOf(false) }
     var showError by remember { mutableStateOf(false) }
 
+    var errorMessage by remember { mutableStateOf("") }
+
+
     // 🔥 Handling success / error & animation (now simplified)
-    LaunchedEffect(userState) {
+    LaunchedEffect(userState.isSuccess, userState.isLoading) {
         isLoading = userState.isLoading
 
         if (userState.isSuccess) {
-            isLoading = false
             showSuccess = true
             showError = false
-            kotlinx.coroutines.delay(1200)
-            onLoginSuccess()
-            viewModel.resetState() // Reset state after success
-        }
 
-        if (userState.error != null) {
+            kotlinx.coroutines.delay(1200)
+
+            onLoginSuccess()
+            viewModel.resetState()
+        }
+    }
+
+    LaunchedEffect(userState.error) {
+        userState.error?.let { msg ->
+            errorMessage = msg    // SIMPAN pesan error di UI
+
             isLoading = false
             showSuccess = false
             showError = true
+
             kotlinx.coroutines.delay(2000)
+
             showError = false
-            viewModel.resetState() // Reset state to allow retry
+            viewModel.resetState()   // aman sekarang
         }
     }
+
+
 
     // ================================
     // 💜 UI START
@@ -97,7 +109,10 @@ fun LoginScreen(
 
             // Banners and Title remain the same...
             AnimatedVisibility(visible = showSuccess, enter = fadeIn() + slideInVertically(), exit = fadeOut() + slideOutVertically()) { SuccessBanner() }
-            AnimatedVisibility(visible = showError, enter = fadeIn() + slideInVertically(), exit = fadeOut() + slideOutVertically()) { ErrorBanner() }
+            AnimatedVisibility(visible = showError) {
+                ErrorBanner(message = errorMessage)
+            }
+
             Text("Welcome Back", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3A3A3A))
             Text("Hello there, sign in to continue", fontSize = 15.sp, color = Color.Gray)
             Image(painter = painterResource(R.drawable.padlock), contentDescription = null, modifier = Modifier
@@ -214,7 +229,7 @@ fun SuccessBanner() {
 // ERROR BANNER
 // ======================================================
 @Composable
-fun ErrorBanner() {
+fun ErrorBanner(message: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -230,6 +245,7 @@ fun ErrorBanner() {
             tint = Color.White
         )
         Spacer(Modifier.width(10.dp))
-        Text("Login gagal, periksa kembali!", color = Color.White, fontWeight = FontWeight.Bold)
+        Text(message, color = Color.White, fontWeight = FontWeight.Bold)
     }
 }
+

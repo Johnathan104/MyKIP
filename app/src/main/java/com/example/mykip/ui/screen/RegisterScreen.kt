@@ -251,10 +251,15 @@ fun RegisterScreen(
                             if (isMahasiswa) {
                                 userViewModel.register(
                                     nim = nim,
+                                    nama = nama,
                                     email = email,
                                     password = password,
-                                    role = "mahasiswa"
+                                    role = "mahasiswa",
+                                    jurusan = jurusan,
+                                    jenjang = jenjang,
+                                    kuliah = kuliah
                                 )
+
                                 mahasiswaViewModel.insert(
                                     Mahasiswa(
                                         nim = nim,
@@ -269,10 +274,12 @@ fun RegisterScreen(
                             } else {
                                 userViewModel.register(
                                     nim = nim,
+                                    nama = nama,  // sebenarnya nama orang tua
                                     email = email,
                                     password = password,
                                     role = "orangTua"
                                 )
+
                             }
 
                             scope.launch {

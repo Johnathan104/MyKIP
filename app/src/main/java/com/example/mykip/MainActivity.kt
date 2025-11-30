@@ -160,7 +160,11 @@ fun MyApp() {
 
             // ⭐ HOME
             composable(BottomNavScreen.Home.route) {
-                HomeScreen(navController)
+                HomeScreen(viewModel = userViewModel,
+                    orangTuaViewModel = orangTuaViewModel,
+                    navController = navController,
+                    mahasiswaViewModel = mahasiswaViewModel,
+                    riwayatViewModel = riwayatViewModel)
             }
 
             // ⭐ PROFILE
