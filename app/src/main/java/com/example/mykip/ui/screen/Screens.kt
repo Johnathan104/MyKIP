@@ -64,7 +64,13 @@ import com.example.mykip.viewmodel.RiwayatDanaViewModel
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Visibility
+import java.text.SimpleDateFormat
+import java.util.Locale
+
 
 
 @Composable
@@ -188,7 +194,7 @@ fun HomeScreen(
                             )
                         )
                         Text(
-                            text = displayedRole,
+                            text = "$displayedRole ${currentMahasiswa?.jenjang ?: "-"}",
                             style = MaterialTheme.typography.bodyMedium.copy(color = Color.White)
                         )
 
@@ -212,10 +218,28 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(30.dp))
         }
 
+        // 🔹 Item pertama: Grid
         item {
-            // Grid tidak scroll sendiri → aman
             FeatureGrid(navController)
+            Spacer(modifier = Modifier.height(12.dp))
         }
+
+        // 🔹 Item berikutnya: Judul
+        item {
+            Text(
+                text = "Riwayat Transaksi",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp)
+            )
+        }
+
+        // 🔹 Semua item riwayat
+        items(riwayatList) { r ->
+            RiwayatItemStyled(r)
+        }
+
+        item { Spacer(modifier = Modifier.height(30.dp)) }
     }
 }
 
@@ -224,12 +248,7 @@ fun HomeScreen(
 @Composable
 fun FeatureGrid(navController:NavController) {
     val features = listOf(
-        FeatureItem("Account and Card", R.drawable.ic_account, Color(0xFF3E57FF)),
-        FeatureItem("Transfer", R.drawable.ic_transfer, Color(0xFFFF3366)),
-        FeatureItem("Withdraw", R.drawable.ic_atm, Color(0xFF008CFF)),
-        FeatureItem("Mobile recharge", R.drawable.ic_mobile, Color(0xFFFFA833)),
-        FeatureItem("Pay the bill", R.drawable.ic_bill, Color(0xFF00B894)),
-        FeatureItem("Credit card", R.drawable.ic_creditcard, Color(0xFFFF6B3D)),
+        FeatureItem("Transfer", R.drawable.ic_transfer, Color(0xFFFF3366), destination = "transfer"),
         FeatureItem("Transaction report", R.drawable.ic_report, Color(0xFF6C5CE7), destination = "kelolaDana")
     )
 
@@ -285,6 +304,64 @@ fun FeatureGrid(navController:NavController) {
     }
 }
 
+@Composable
+fun RiwayatItemStyled(r: RiwayatDana) {
+
+    val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
+    val tanggalFormatted = dateFormat.format(r.tanggal.toDate())
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+
+        // ICON SHOPEE STYLE
+        Box(
+            modifier = Modifier
+                .size(46.dp)
+                .background(Color(0xFFFF6F00).copy(alpha = 0.2f), RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.ic_report),
+                contentDescription = "",
+                modifier = Modifier.size(28.dp)
+            )
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = if (r.goingIn) "Pemasukan" else "Pengeluaran",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+            Text(
+                text = r.keterangan,
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+            Text(
+                text = tanggalFormatted,
+                fontSize = 13.sp,
+                color = Color.Gray
+            )
+        }
+
+        Text(
+            text = (if (r.goingIn) "+Rp " else "-Rp ") + r.jumlah.toString(),
+            color = if (r.goingIn) Color(0xFF2ECC71) else Color(0xFFE74C3C),
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp
+        )
+    }
+}
 
 // Item bullet point
 @Composable
@@ -371,214 +448,273 @@ fun ProfileScreen(
         if (isMahasiswa) "Rp. ${user!!.balance}" else "-"
 
 
-    // ======================================
-    // UI
-    // ======================================
+    val displayedJenjang = currentMahasiswa?.jenjang ?: "-"
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
-            .padding(horizontal = 24.dp)
             .verticalScroll(rememberScrollState())
     ) {
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // ============================
-        // HEADER
-        // ============================
-        Text(
-            text = "Account",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // ============================
-        // CARD GRADIENT (seperti gambar)
-        // ============================
-        Card(
+        // ================================
+        // HEADER ORANYE
+        // ================================
+        Box(
             modifier = Modifier
-                .fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                .fillMaxWidth()
+                .background(Color(0xFFFF6A00)) // oranye SeaBank
+                .padding(20.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            listOf(
-                                Color(0xFF43A3F3),
-                                Color(0xFF6A5AF9)
-                            )
-                        )
-                    )
-                    .padding(24.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically
             ) {
 
+                // Foto Profil
+                Image(
+                    painter = painterResource(id = R.drawable.ic_profile_placeholder),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(CircleShape)
+                )
+
+                Spacer(modifier = Modifier.width(16.dp))
+
                 Column {
+                    Text(
+                        text = displayedNama,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
 
-                    // NOMOR KARTU
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "12345678912356",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
-
-                        Icon(
-                            imageVector = Icons.Default.Visibility,
-                            contentDescription = null,
-                            tint = Color.White
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-
-                        Column {
-                            Text(
-                                text = "Card Holder Name",
-                                fontSize = 12.sp,
-                                color = Color.White.copy(alpha = 0.7f)
-                            )
-                            Text(
-                                text = displayedEmail,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White
-                            )
-                        }
-
-                        Column {
-                            Text(
-                                text = "Expiry date",
-                                fontSize = 12.sp,
-                                color = Color.White.copy(alpha = 0.7f)
-                            )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "02/30",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color.White
-                                )
-
-                                Spacer(modifier = Modifier.width(6.dp))
-
-                                Switch(
-                                    checked = true,
-                                    onCheckedChange = {},
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color.White,
-                                        checkedTrackColor = Color.White.copy(alpha = 0.4f)
-                                    )
-                                )
-                            }
-                        }
-
-                    }
+                    Text(
+                        text = "$displayedRole $displayedJenjang",
+                        fontSize = 15.sp,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // ============================
-        // DETAIL INFORMATION TITLE
-        // ============================
-        Text(
-            text = "DETAIL INFORMATION",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 2.sp,
-            color = Color(0xFF9E9E9E)
-        )
-
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (isMahasiswa) {
-            Text("Name"); ReadOnlyField(displayedNama)
-            Spacer(Modifier.height(14.dp))
-
-            Text("E-mail"); ReadOnlyField(displayedEmail)
-            Spacer(Modifier.height(14.dp))
-
-            Text("NIM"); ReadOnlyField(displayedNim)
-            Spacer(Modifier.height(14.dp))
-
-            Text("Role"); ReadOnlyField(displayedRole)
-        }
-
-        if (isOrtu) {
-            Text("Name"); ReadOnlyField(displayedNama)
-            Spacer(Modifier.height(14.dp))
-
-            Text("E-mail"); ReadOnlyField(displayedEmail)
-            Spacer(Modifier.height(14.dp))
-
-            Text("NIM Anak"); ReadOnlyField(displayedNimAnak)
-            Spacer(Modifier.height(14.dp))
-
-            Text("Role"); ReadOnlyField(displayedRole)
-        }
-
-        if (isAdmin) {
-            Text("Name"); ReadOnlyField(displayedNama)
-            Spacer(Modifier.height(14.dp))
-
-            Text("E-mail"); ReadOnlyField(displayedEmail)
-            Spacer(Modifier.height(14.dp))
-
-            Text("NIM"); ReadOnlyField(displayedNim)
-            Spacer(Modifier.height(14.dp))
-
-            Text("Role"); ReadOnlyField(displayedRole)
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Divider(
-            color = Color.LightGray.copy(alpha = 0.4f),
-            thickness = 1.dp,
-            modifier = Modifier.fillMaxWidth()
+        // ================================
+        // MENU LIST
+        // ================================
+        SettingItem(
+            icon = R.drawable.ic_profile,
+            text = "Profil Saya",
+            onClick = { navController.navigate("profileDetail") }
         )
 
-        Spacer(modifier = Modifier.height(40.dp))
+        SettingItem(
+            icon = R.drawable.ic_setting,
+            text = "Pengaturan Umum",
+            onClick = { navController.navigate("pengaturanUmum") }
+        )
 
-        // ============================
-        // LOGOUT BUTTON (tetap)
-        // ============================
+        SettingItem(
+            icon = R.drawable.ic_help,
+            text = "Pusat Bantuan",
+            onClick = { /* TODO */ }
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // ================================
+        // LOGOUT
+        // ================================
         Button(
             onClick = {
                 viewModel.logout()
                 orangTuaViewModel.logout()
                 onLogout()
             },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6A00)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
         ) {
-            Text("Logout", fontWeight = FontWeight.Bold)
+            Text("Log Out", color = Color.White, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(40.dp))
     }
-
 }
+
+@Composable
+fun SettingItem(icon: Int, text: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            painterResource(id = icon),
+            contentDescription = null,
+            tint = Color.Black,
+            modifier = Modifier.size(22.dp)
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Text(
+            text = text,
+            fontSize = 16.sp,
+            color = Color.Black
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        Icon(
+            imageVector = Icons.Default.KeyboardArrowRight,
+            contentDescription = null,
+            tint = Color.Gray
+        )
+    }
+
+    Divider(
+        color = Color.LightGray.copy(alpha = 0.3f),
+        thickness = 1.dp,
+        modifier = Modifier.padding(start = 20.dp)
+    )
+}
+
+@Composable
+fun ProfileDetailScreen(
+    navController: NavController,
+    viewModel: UserViewModel,
+    mahasiswaViewModel: MahasiswaViewModel
+) {
+    val user = viewModel.loggedInUser
+
+    val isOrtu = user?.role == "orangTua"
+    val isAdmin = user?.role == "admin"
+    val isMahasiswa = user?.role == "mahasiswa"
+
+    var currentMahasiswa by remember { mutableStateOf<Mahasiswa?>(null) }
+    var isEditing by remember { mutableStateOf(false) }
+
+    // Editable fields
+    var editableNama by remember { mutableStateOf("") }
+    var editableNim by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        if (isMahasiswa || isOrtu) {
+            mahasiswaViewModel.getByNim(user!!.nim) { mhs ->
+                currentMahasiswa = mhs
+                if (mhs != null) {
+                    editableNama = mhs.nama
+                    editableNim = mhs.nim
+                }
+            }
+        } else {
+            editableNama = user?.nama ?: ""
+            editableNim = user?.nim ?: ""
+        }
+    }
+
+    val displayedEmail = user?.email ?: "-"
+    val displayedRole = when {
+        isOrtu -> "Orang Tua"
+        isAdmin -> "Admin"
+        else -> "Mahasiswa"
+    }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(20.dp)
+    ) {
+
+        // HEADER
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+            }
+
+            // BUTTON EDIT / SELESAI
+            TextButton(onClick = {
+                if (isEditing) {
+                    // SAVE
+                    if (isMahasiswa || isOrtu) {
+                        currentMahasiswa?.let { mhs ->
+                            val updated = mhs.copy(
+                                nama = editableNama,
+                                nim = editableNim
+                            )
+                            mahasiswaViewModel.update(updated)
+                        }
+                    }
+                }
+
+                isEditing = !isEditing
+            }) {
+                Text(if (isEditing) "Selesai" else "Edit")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "DETAIL INFORMATION",
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            color = Color.Gray
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // NAME
+        Text("Name")
+        EditableField(
+            value = editableNama,
+            enabled = isEditing,
+            onChange = { editableNama = it }
+        )
+        Spacer(Modifier.height(14.dp))
+
+        // EMAIL (selalu readonly)
+        Text("E-mail")
+        ReadOnlyField(displayedEmail)
+        Spacer(Modifier.height(14.dp))
+
+        // NIM
+        Text(if (isOrtu) "NIM Anak" else "NIM")
+        EditableField(
+            value = editableNim,
+            enabled = isEditing && !isOrtu, // Ortu tidak boleh edit NIM anak
+            onChange = { editableNim = it }
+        )
+        Spacer(Modifier.height(14.dp))
+
+        // ROLE (readonly)
+        Text("Role")
+        ReadOnlyField(displayedRole)
+    }
+}
+
+@Composable
+fun EditableField(
+    value: String,
+    enabled: Boolean = false,
+    onChange: (String) -> Unit
+) {
+    TextField(
+        value = value,
+        onValueChange = { if (enabled) onChange(it) },
+        modifier = Modifier.fillMaxWidth(),
+        enabled = enabled,
+        singleLine = true
+    )
+}
+
+
 
 @Composable
 fun ReadOnlyField(value: String) {
@@ -610,5 +746,45 @@ fun InfoItem(label: String, value: String) {
     ) {
         Text(text = label, fontWeight = FontWeight.Medium)
         Text(text = value, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+fun PengaturanUmumScreen(
+    navController: NavController,
+    userViewModel: UserViewModel,
+    mahasiswaViewModel: MahasiswaViewModel,
+    orangTuaViewModel: OrangTuaViewModel,
+    riwayatViewModel: RiwayatDanaViewModel
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+
+        Text(
+            text = "Pengaturan Umum",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text("• Notifikasi Aplikasi")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text("• Kebijakan Privasi")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text("• Tentang Aplikasi")
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = { navController.popBackStack() },
+            modifier = Modifier.padding(top = 20.dp)
+        ) {
+            Text("Kembali")
+        }
     }
 }

@@ -15,6 +15,19 @@ import com.google.firebase.firestore.FirebaseFirestore
 class OrangTuaViewModel(
     private val repository: OrangTuaRepository
 ) : ViewModel() {
+    fun transferKeAnak(
+        nimAnak: String,
+        jumlah: Int,
+        keterangan: String,
+        riwayatViewModel: RiwayatDanaViewModel
+    ) {
+        riwayatViewModel.tambahRiwayat(
+            nim = nimAnak,
+            jumlah = jumlah,
+            keterangan = keterangan,
+            jenis = "Transfer oleh Orang Tua"
+        )
+    }
 
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()

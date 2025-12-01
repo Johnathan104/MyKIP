@@ -43,115 +43,62 @@ fun KelolaDanaScreen(
     riwayatViewModel: RiwayatDanaViewModel,
     navController: NavController
 ) {
-    fun getTodayDate(): Timestamp {
-        return Timestamp(Date()) // Create a new Timestamp from the current Date
-    }
     val user = userViewModel.loggedInUser
-    val nim = user?.nim ?: return
+    val isMahasiswa = user?.role == "mahasiswa"
+    val isOrtu = user?.role == "orangTua"
+
     var riwayatList by remember { mutableStateOf<List<RiwayatDana>>(emptyList()) }
-    val (transaksiMasuk, transaksiKeluar) = remember(riwayatList) {
-        var masuk = 0
-        var keluar = 0
-        for (r in riwayatList) {
-            if (r.goingIn) masuk += r.jumlah else keluar += r.jumlah
+
+    // ambil transaksi sesuai role
+    LaunchedEffect(Unit) {
+        if (isMahasiswa) {
+            riwayatViewModel.getByNim(user!!.nim) { riwayatList = it }
         }
-        masuk to keluar
+
+        if (isOrtu) {
+            riwayatViewModel.getByNim(user!!.nim) { riwayatList = it }
+        }
     }
 
-
-
-    // LOAD RIWAYAT USER
-    LaunchedEffect(nim) {
-        riwayatViewModel.getByNim(nim){ riwayatList = it}
-    }
-
-
-
-    var showWithdrawDialog by remember { mutableStateOf(false) }
+    val totalMasuk = riwayatList.filter { it.goingIn }.sumOf { it.jumlah }
+    val totalKeluar = riwayatList.filter { !it.goingIn }.sumOf { it.jumlah }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(36.dp)
-            .padding(top = 80.dp)
+            .padding(24.dp)
     ) {
 
         Text(
-            text = "Transaction Report",
-            style = MaterialTheme.typography.headlineSmall,
+            text = "Laporan Transaksi",
+            fontSize = 22.sp,
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(Modifier.height(20.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFE9F0FF)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF1FF))
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                InfoItem("Total Saldo", "Rp ${user?.balance}")
-                InfoItem("Transaksi Masuk", transaksiMasuk.toString())
-                InfoItem("Transaksi Keluar", transaksiKeluar.toString())
-
-                Button(
-                    onClick = { showWithdrawDialog = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Tarik Dana", fontWeight = FontWeight.Bold)
-                }
+            Column(Modifier.padding(16.dp)) {
+                InfoItem("Saldo Saat Ini", "Rp ${user?.balance}")
+                InfoItem("Total Masuk", "Rp $totalMasuk")
+                InfoItem("Total Keluar", "Rp $totalKeluar")
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(Modifier.height(20.dp))
 
-        Text(
-            text = "Riwayat Transaksi",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Text("Riwayat Transaksi", fontWeight = FontWeight.Bold)
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(Modifier.height(8.dp))
 
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(riwayatList) { r ->
-                RiwayatItem(r)
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(riwayatList) { riwayat ->
+                RiwayatItemStyled(riwayat)
             }
         }
-
-
-        Spacer(modifier = Modifier.height(30.dp))
-
-
-    }
-
-    if (showWithdrawDialog) {
-        WithdrawDialog(
-            userViewModel = userViewModel,
-            onDismiss = { showWithdrawDialog = false },
-            onSubmit = { jumlah, keterangan ->
-                userViewModel.penarikan(
-                    nim = nim,
-                    jumlah = jumlah,
-                    keterangan = keterangan,
-                    riwayatViewModel = riwayatViewModel,
-                    onError = {}
-                )
-
-                riwayatList = riwayatList+RiwayatDana(
-                    nim = nim,
-                    jumlah = jumlah,
-                    keterangan = keterangan,
-                    goingIn = false,
-                    tanggal = getTodayDate()
-                )
-            }
-        )
     }
 }
+

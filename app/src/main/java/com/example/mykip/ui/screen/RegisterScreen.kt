@@ -254,11 +254,7 @@ fun RegisterScreen(
                                     nama = nama,
                                     email = email,
                                     password = password,
-                                    role = "mahasiswa",
-                                    jurusan = jurusan,
-                                    jenjang = jenjang,
-                                    kuliah = kuliah
-                                )
+                                    role = "mahasiswa" )
 
                                 mahasiswaViewModel.insert(
                                     Mahasiswa(

@@ -217,6 +217,40 @@ fun MyApp() {
                     riwayatViewModel = riwayatViewModel
                 )
             }
+
+            // ⭐ PENGATURAN UMUM
+            composable("pengaturanUmum") {
+                PengaturanUmumScreen(
+                    navController = navController,
+                    userViewModel = userViewModel,
+                    mahasiswaViewModel = mahasiswaViewModel,
+                    orangTuaViewModel = orangTuaViewModel,
+                    riwayatViewModel = riwayatViewModel
+                )
+            }
+            composable("profileDetail") {
+                ProfileDetailScreen(
+                    navController = navController,
+                    viewModel = userViewModel,
+                    mahasiswaViewModel = mahasiswaViewModel
+                )
+            }
+
+            composable("transfer") {
+                TransferScreen(
+                    navController = navController,
+                    userViewModel = userViewModel,
+                    mahasiswaViewModel = mahasiswaViewModel,
+                    orangTuaViewModel = orangTuaViewModel,
+                    riwayatViewModel = riwayatViewModel
+                )
+            }
+
+
+            composable("kelolaDana") {
+                KelolaDanaScreen(userViewModel, riwayatViewModel, navController)
+            }
+
         }
     }
 }

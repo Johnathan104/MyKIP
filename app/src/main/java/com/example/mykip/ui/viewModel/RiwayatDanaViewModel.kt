@@ -6,6 +6,7 @@ import com.example.mykip.data.Mahasiswa
 import com.example.mykip.data.RiwayatDana
 import com.example.mykip.repository.RiwayatDanaRepository
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -19,6 +20,26 @@ class RiwayatDanaViewModel(
     fun getTodayDate(): Timestamp {
         return Timestamp(Date()) // Create a new Timestamp from the current Date
     }
+
+    fun tambahRiwayat(
+        nim: String,
+        jumlah: Int,
+        keterangan: String,
+        jenis: String
+    ) {
+        val data = hashMapOf(
+            "nim" to nim,
+            "jumlah" to jumlah,
+            "keterangan" to keterangan,
+            "jenis" to jenis,
+            "timestamp" to System.currentTimeMillis()
+        )
+
+        FirebaseFirestore.getInstance()
+            .collection("riwayat")
+            .add(data)
+    }
+
     private val _riwayatList = MutableStateFlow<List<RiwayatDana>>(emptyList())
     val riwayatList: StateFlow<List<RiwayatDana>> = _riwayatList
 

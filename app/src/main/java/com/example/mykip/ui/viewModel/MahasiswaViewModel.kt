@@ -13,6 +13,20 @@ class MahasiswaViewModel(
     private val repository: MahasiswaRepository
 ) : ViewModel() {
 
+    fun transferMahasiswa(
+        nim: String,
+        jumlah: Int,
+        keterangan: String,
+        riwayatViewModel: RiwayatDanaViewModel
+    ) {
+        riwayatViewModel.tambahRiwayat(
+            nim = nim,
+            jumlah = jumlah,
+            keterangan = keterangan,
+            jenis = "Transfer oleh Mahasiswa"
+        )
+    }
+
     var mahasiswa: Mahasiswa? by mutableStateOf(null)
         private set
 
