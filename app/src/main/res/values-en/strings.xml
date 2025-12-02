@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">MyKIP</string>
+
+    <string name="general_settings">General Settings</string>
+    <string name="language">Application Language</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="about_app">About App</string>
+    <string name="version">Version</string>
+    <string name="choose_language">Choose Language</string>
+    <string name="indonesian">Indonesian</string>
+    <string name="english">English</string>
+</resources>

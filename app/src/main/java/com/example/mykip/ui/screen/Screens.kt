@@ -1,5 +1,7 @@
 package com.example.mykip.ui.screen
 
+import android.app.Activity
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -68,6 +70,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.ui.res.stringResource
+import com.example.mykip.MyKIPApp
+import com.example.mykip.data.LanguagePreference
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -202,10 +210,21 @@ fun HomeScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         )
+                        // displayedRole = role yang sudah di-format (contoh: "Mahasiswa", "Admin", dll)
+
+                        val finalRoleText = if (displayedRole.lowercase() == "mahasiswa") {
+                            // Jika mahasiswa → tambahkan jenjang
+                            "${displayedRole} ${currentMahasiswa?.jenjang ?: "-"}"
+                        } else {
+                            // Jika bukan mahasiswa → tampilkan role saja
+                            displayedRole
+                        }
+
                         Text(
-                            text = "$displayedRole ${currentMahasiswa?.jenjang ?: "-"}",
+                            text = finalRoleText,
                             style = MaterialTheme.typography.bodyMedium.copy(color = Color.White)
                         )
+
 
                         Spacer(modifier = Modifier.height(18.dp))
 
@@ -398,118 +417,68 @@ fun ProfileScreen(
     // ======================================
     val isOrtu = user?.role == "orangTua"
     val isAdmin = user?.role == "admin"
-    val isMahasiswa = user?.role =="mahasiswa"
+    val isMahasiswa = user?.role == "mahasiswa"
 
-    // ======================================
-    // LOAD DATA
-    // ======================================
     var mahasiswaList by remember { mutableStateOf(emptyList<Mahasiswa>()) }
-//    var riwayatList by remember { mutableStateOf(emptyList<RiwayatDana>()) }
     var currentMahasiswa by remember { mutableStateOf<Mahasiswa?>(null) }
 
     LaunchedEffect(Unit) {
-        // ambil semua mahasiswa
         mahasiswaViewModel.getAll { mahasiswaList = it }
-        // Mahasiswa → ambil berdasarkan nim user
-        mahasiswaViewModel.getByNim(user!!.nim) { mhs ->
-            currentMahasiswa = mhs
-        }
-
-//        riwayatViewModel.getByNim(user!!.nim) {
-//            riwayatList = it
-//        }
-
+        mahasiswaViewModel.getByNim(user!!.nim) { mhs -> currentMahasiswa = mhs }
     }
-
-
-    val jumlahAnak = mahasiswaList.size
-//    val transaksiMasuk = riwayatList.count { it.goingIn }
-//    val transaksiKeluar = riwayatList.count { !it.goingIn }
 
     val displayedNama = when {
         isMahasiswa -> currentMahasiswa?.nama ?: "-"
-        isOrtu -> user?.nama ?: "-"       // Nama orang tua
+        isOrtu -> user?.nama ?: "-"
         isAdmin -> user?.nama ?: "-"
         else -> "-"
     }
-
-    val displayedEmail = user?.email ?: "-"
-
-    val displayedNim = when {
-        isMahasiswa -> user?.nim ?: "-"   // NIM mahasiswa
-        isAdmin -> user?.nim ?: "-"       // Admin boleh melihat NIM user
-        else -> "-"                       // Ortu tidak pakai NIM pribadi
-    }
-
-    val displayedNimAnak = when {
-        isOrtu -> currentMahasiswa?.nim ?: "-"   // NIM anak
-        else -> "-"                              // Mahasiswa & admin tidak tampil NIM anak
-    }
-
-    val displayedRole = when {
-        isOrtu -> "Orang Tua"
-        isAdmin -> "Admin"
-        else -> "Mahasiswa"
-    }
-
-
-    val totalSaldo =
-        if (isMahasiswa) "Rp. ${user!!.balance}" else "-"
-
-
-    val displayedJenjang = currentMahasiswa?.jenjang ?: "-"
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp)
     ) {
-        // ================================
-        // HEADER ORANYE
-        // ================================
+
+        Spacer(Modifier.height(100.dp))
+
+        // ============================
+        // FOTO PROFIL DI TENGAH
+        // ============================
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFFFF6A00)) // oranye SeaBank
-                .padding(20.dp)
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-
-                // Foto Profil
-                Image(
-                    painter = painterResource(id = R.drawable.ic_profile_placeholder),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(CircleShape)
-                )
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column {
-                    Text(
-                        text = displayedNama,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-
-                    Text(
-                        text = "$displayedRole $displayedJenjang",
-                        fontSize = 15.sp,
-                        color = Color.White.copy(alpha = 0.9f)
-                    )
-                }
-            }
+            Image(
+                painter = painterResource(id = R.drawable.ic_profile_placeholder),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(110.dp)
+                    .clip(CircleShape)
+            )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(Modifier.height(10.dp))
 
-        // ================================
-        // MENU LIST
-        // ================================
+        // NAMA DI TENGAH
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = displayedNama,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF5A4CE1)
+            )
+        }
+
+        Spacer(Modifier.height(30.dp))
+
+        // ============================
+        // MENU ORIGINAL (TIDAK DIUBAH)
+        // ============================
         SettingItem(
             icon = R.drawable.ic_profile,
             text = "Profil Saya",
@@ -525,31 +494,32 @@ fun ProfileScreen(
         SettingItem(
             icon = R.drawable.ic_help,
             text = "Pusat Bantuan",
-            onClick = { /* TODO */ }
+            onClick = { /*TODO*/ }
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(Modifier.height(20.dp))
 
-        // ================================
-        // LOGOUT
-        // ================================
+        // ============================
+        // LOGOUT BUTTON
+        // ============================
         Button(
             onClick = {
                 viewModel.logout()
                 orangTuaViewModel.logout()
                 onLogout()
             },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6A00)),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C63FF)),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
         ) {
             Text("Log Out", color = Color.White, fontWeight = FontWeight.Bold)
         }
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(Modifier.height(40.dp))
     }
 }
+
+
 
 @Composable
 fun SettingItem(icon: Int, text: String, onClick: () -> Unit) {
@@ -645,38 +615,35 @@ fun ProfileDetailScreen(
     }
 
     Column(
-        Modifier
+        modifier = Modifier
             .fillMaxSize()
-            .padding(20.dp)
+            .padding(bottom = 60.dp)
     ) {
 
-        // HEADER
+        // ---------------- HEADER (tidak ikut dicenter)
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp, start = 16.dp, end = 16.dp)
         ) {
             IconButton(onClick = { navController.popBackStack() }) {
                 Icon(Icons.Default.ArrowBack, contentDescription = "Back")
             }
 
-            // BUTTON EDIT / SELESAI
             TextButton(onClick = {
                 if (isEditing) {
-                    // SAVE
+                    // SAVE LOGIC (biarkan sama)
                     if (isMahasiswa) {
                         currentMahasiswa?.let { mhs ->
-                            val updated = mhs.copy(
-                                nama = editableNama,
-                            )
-                            val updatedUser = user!!.copy(
-                                nama = editableNama,
-                            )
+                            val updated = mhs.copy(nama = editableNama)
+                            val updatedUser = user!!.copy(nama = editableNama)
                             mahasiswaViewModel.update(updated)
                             userViewModel.update(updatedUser)
                         }
                     }
-                    if(isOrtu){
+                    if (isOrtu) {
                         val updated = user.copy(
                             nama = editableNama,
                             nim = editableNim
@@ -684,55 +651,209 @@ fun ProfileDetailScreen(
                         userViewModel.update(updated)
                     }
                 }
-
                 isEditing = !isEditing
             }) {
                 Text(if (isEditing) "Selesai" else "Edit")
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        // ---------------- CONTENT (yang dicenter)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.Center   // hanya ini yang center
+        ) {
 
-        Text(
-            text = "DETAIL INFORMATION",
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.sp,
-            color = Color.Gray
+            Text(
+                text = "DETAIL INFORMATION",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text("Name")
+            EditableField(value = editableNama, enabled = isEditing, onChange = { editableNama = it })
+            Spacer(Modifier.height(14.dp))
+
+            Text("E-mail")
+            ReadOnlyField(displayedEmail)
+            Spacer(Modifier.height(14.dp))
+
+            if (isOrtu) {
+                Text("Nama Anak")
+                ReadOnlyField(anakNama)
+                Spacer(Modifier.height(14.dp))
+            }
+
+            Text(if (isOrtu) "NIM Anak" else "NIM")
+            EditableField(
+                value = editableNim,
+                enabled = isEditing && isOrtu,
+                onChange = { editableNim = it }
+            )
+            Spacer(Modifier.height(14.dp))
+
+            Text("Role")
+            ReadOnlyField(displayedRole)
+        }
+    }
+
+}
+
+@Composable
+fun PengaturanUmumScreen(
+    navController: NavController,
+    userViewModel: UserViewModel,
+    mahasiswaViewModel: MahasiswaViewModel,
+    orangTuaViewModel: OrangTuaViewModel,
+    riwayatViewModel: RiwayatDanaViewModel
+) {
+    val context = LocalContext.current
+    // PAKAI SINGLETON DARI APPLICATION — JANGAN BIKIN INSTANCE BARU
+    val languagePreference = MyKIPApp.languagePreference
+
+    val coroutineScope = rememberCoroutineScope()
+    var showLanguageDialog by remember { mutableStateOf(false) }
+
+    if (showLanguageDialog) {
+        LanguageDialog(
+            onDismiss = { showLanguageDialog = false },
+            onSelect = { lang ->
+                showLanguageDialog = false
+
+                // Simpan pilihan bahasa di IO dispatcher
+                coroutineScope.launch(Dispatchers.IO) {
+                    languagePreference.setLanguage(lang)
+                }
+
+                // Restart activity agar perubahan bahasa langsung terlihat
+                (context as? Activity)?.recreate()
+            }
         )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp)
+    ) {
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+            }
+
+            Text(
+                text = stringResource(id = R.string.general_settings),
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        }
+
         Spacer(modifier = Modifier.height(20.dp))
 
-        // NAME
-        Text("Name")
-        EditableField(
-            value = editableNama,
-            enabled = isEditing,
-            onChange = { editableNama = it }
-        )
-        Spacer(Modifier.height(14.dp))
+        // ========== PENGATURAN APLIKASI ==========
 
-        // EMAIL (selalu readonly)
-        Text("E-mail")
-        ReadOnlyField(displayedEmail)
-        Spacer(Modifier.height(14.dp))
-        if(isOrtu) {
-            Text("Nama Anak")
-            ReadOnlyField(anakNama)
-            Spacer(Modifier.height(14.dp))
-        }
-        // NIM
-        Text(if (isOrtu) "NIM Anak" else "NIM")
-        EditableField(
-            value = editableNim,
-            enabled = isEditing && isOrtu, // anak tidak boleh ganti nim sendiri sementar ortu bisa ganti nim sesuai dengan nim anaknya
-            onChange = { editableNim = it }
+        SettingRow(
+            text = "Bahasa Aplikasi",
+            onClick = { showLanguageDialog = true }
         )
-        Spacer(Modifier.height(14.dp))
 
-        // ROLE (readonly)
-        Text("Role")
-        ReadOnlyField(displayedRole)
+        SettingRow(
+            text = "Kebijakan Privasi",
+            onClick = { /* TODO */ }
+        )
+
+        SettingRow(
+            text = "Tentang Aplikasi",
+            onClick = { /* TODO */ }
+        )
+
+        SettingRowWithEndText(
+            text = "Versi",
+            endText = "1.0.0",
+            onClick = {}
+        )
     }
 }
+
+@Composable
+fun LanguageDialog(
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Pilih Bahasa") },
+        text = {
+            Column {
+                Text(
+                    "Indonesia",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelect("id") }
+                        .padding(12.dp)
+                )
+                Text(
+                    "English",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelect("en") }
+                        .padding(12.dp)
+                )
+            }
+        },
+        confirmButton = {}
+    )
+}
+
+
+@Composable
+fun SettingRow(text: String, onClick: () -> Unit) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onClick() }
+                .padding(vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text, fontSize = 16.sp)
+            Spacer(Modifier.weight(1f))
+            Icon(
+                Icons.Default.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Color.Gray
+            )
+        }
+        Divider(color = Color.LightGray.copy(alpha = 0.3f))
+    }
+}
+
+@Composable
+fun SettingRowWithEndText(text: String, endText: String, onClick: () -> Unit) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onClick() }
+                .padding(vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text, fontSize = 16.sp)
+            Spacer(Modifier.weight(1f))
+            Text(endText, fontSize = 14.sp, color = Color.Gray)
+        }
+        Divider(color = Color.LightGray.copy(alpha = 0.3f))
+    }
+}
+
 
 @Composable
 fun EditableField(
@@ -784,42 +905,4 @@ fun InfoItem(label: String, value: String) {
     }
 }
 
-@Composable
-fun PengaturanUmumScreen(
-    navController: NavController,
-    userViewModel: UserViewModel,
-    mahasiswaViewModel: MahasiswaViewModel,
-    orangTuaViewModel: OrangTuaViewModel,
-    riwayatViewModel: RiwayatDanaViewModel
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
 
-        Text(
-            text = "Pengaturan Umum",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text("• Notifikasi Aplikasi")
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text("• Kebijakan Privasi")
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text("• Tentang Aplikasi")
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(
-            onClick = { navController.popBackStack() },
-            modifier = Modifier.padding(top = 20.dp)
-        ) {
-            Text("Kembali")
-        }
-    }
-}

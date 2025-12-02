@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.example.mykip.data.OrangTua
+import com.example.mykip.data.*
 import com.example.mykip.repository.OrangTuaRepository
 import com.example.mykip.ui.viewModel.UiState
 import com.google.firebase.auth.FirebaseAuth
@@ -21,13 +22,45 @@ class OrangTuaViewModel(
         keterangan: String,
         riwayatViewModel: RiwayatDanaViewModel
     ) {
-        riwayatViewModel.tambahRiwayat(
-            nim = nimAnak,
-            jumlah = jumlah,
-            keterangan = keterangan,
-            jenis = "Transfer oleh Orang Tua"
-        )
+        val db = FirebaseFirestore.getInstance()
+
+        // 1. Kurangi saldo orang tua
+        db.collection("users")
+            .whereEqualTo("email", loggedInOrtu?.email)
+            .get()
+            .addOnSuccessListener { snap ->
+                val parentDoc = snap.documents.firstOrNull() ?: return@addOnSuccessListener
+                val parent = parentDoc.toObject(User::class.java) ?: return@addOnSuccessListener
+
+                val newParentBalance = parent.balance - jumlah
+                db.collection("users")
+                    .document(parentDoc.id)
+                    .update("balance", newParentBalance)
+
+                // 2. Tambah saldo anak
+                db.collection("users")
+                    .whereEqualTo("nim", nimAnak)
+                    .get()
+                    .addOnSuccessListener { childSnap ->
+                        val childDoc = childSnap.documents.firstOrNull() ?: return@addOnSuccessListener
+                        val child = childDoc.toObject(User::class.java) ?: return@addOnSuccessListener
+
+                        val newChildBalance = child.balance + jumlah
+                        db.collection("users")
+                            .document(childDoc.id)
+                            .update("balance", newChildBalance)
+
+                        // 3. Tambah riwayat
+                        riwayatViewModel.insertRiwayat(
+                            nim = nimAnak,
+                            jumlah = jumlah,
+                            masuk = true,
+                            keterangan = keterangan
+                        )
+                    }
+            }
     }
+
 
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
@@ -130,6 +163,50 @@ class OrangTuaViewModel(
                     message = "error terjadi",
                     isSuccess = false
                 )
+            }
+    }
+
+    // ---------------------------------------------------------
+// GET ALL CHILDREN BY PARENT ID
+// ---------------------------------------------------------
+    fun getAnakByParent(
+        parentId: String,
+        callback: (List<Mahasiswa>) -> Unit
+    ) {
+        db.collection("orangTua")
+            .document(parentId)
+            .get()
+            .addOnSuccessListener { doc ->
+
+                if (!doc.exists()) {
+                    callback(emptyList())
+                    return@addOnSuccessListener
+                }
+
+                // Ambil list array anak NIM
+                val anakNimList = doc.get("anakNim") as? List<String> ?: emptyList()
+
+                if (anakNimList.isEmpty()) {
+                    callback(emptyList())
+                    return@addOnSuccessListener
+                }
+
+                // Query mahasiswa berdasarkan daftar NIM
+                db.collection("mahasiswa")
+                    .whereIn("nim", anakNimList)
+                    .get()
+                    .addOnSuccessListener { snap ->
+
+                        val anakList = snap.documents.mapNotNull { it.toObject(Mahasiswa::class.java) }
+
+                        callback(anakList)
+                    }
+                    .addOnFailureListener {
+                        callback(emptyList())
+                    }
+            }
+            .addOnFailureListener {
+                callback(emptyList())
             }
     }
 

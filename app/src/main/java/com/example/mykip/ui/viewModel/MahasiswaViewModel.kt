@@ -8,6 +8,8 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import com.example.mykip.data.User
+import com.google.firebase.firestore.FirebaseFirestore
 
 class MahasiswaViewModel(
     private val repository: MahasiswaRepository
@@ -19,13 +21,31 @@ class MahasiswaViewModel(
         keterangan: String,
         riwayatViewModel: RiwayatDanaViewModel
     ) {
-        riwayatViewModel.tambahRiwayat(
-            nim = nim,
-            jumlah = jumlah,
-            keterangan = keterangan,
-            jenis = "Transfer oleh Mahasiswa"
-        )
+        val db = FirebaseFirestore.getInstance()
+
+        db.collection("users")
+            .whereEqualTo("nim", nim)
+            .get()
+            .addOnSuccessListener { snap ->
+                val doc = snap.documents.firstOrNull() ?: return@addOnSuccessListener
+                val user = doc.toObject(User::class.java) ?: return@addOnSuccessListener
+
+                // Kurangi saldo
+                val newBalance = user.balance - jumlah
+                db.collection("users")
+                    .document(doc.id)
+                    .update("balance", newBalance)
+
+                // Simpan riwayat
+                riwayatViewModel.insertRiwayat(
+                    nim = nim,
+                    jumlah = jumlah,
+                    masuk = false,
+                    keterangan = keterangan
+                )
+            }
     }
+
 
     var mahasiswa: Mahasiswa? by mutableStateOf(null)
         private set

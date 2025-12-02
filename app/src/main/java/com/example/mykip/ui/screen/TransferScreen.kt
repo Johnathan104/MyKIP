@@ -1,6 +1,8 @@
 package com.example.mykip.ui.screen
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -33,6 +35,11 @@ fun TransferScreen(
             .fillMaxSize()
             .padding(24.dp)
     ) {
+        Spacer(Modifier.height(20.dp))
+
+        IconButton(onClick = { navController.popBackStack() }) {
+            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+        }
 
         Text("Transfer Dana", fontSize = 22.sp, fontWeight = FontWeight.Bold)
 
