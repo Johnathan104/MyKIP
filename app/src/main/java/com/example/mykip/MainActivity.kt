@@ -21,6 +21,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import com.example.mykip.data.SessionManager
 
 import com.example.mykip.datastore.OnboardingDataStore
 import com.example.mykip.repository.*
@@ -59,6 +60,8 @@ class MainActivity : ComponentActivity() {
 fun MyApp() {
     val navController = rememberNavController()
     val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+
 
     // 🔥 ONBOARDING DATASTORE
     val onboardingDataStore = remember { OnboardingDataStore(context) }
@@ -66,8 +69,10 @@ fun MyApp() {
 
     val db = Firebase.firestore
 
+
+
     val userViewModel: UserViewModel =
-        viewModel(factory = UserViewModelFactory(UserRepository()))
+        viewModel(factory = UserViewModelFactory(UserRepository(), sessionManager) )
 
     val mahasiswaViewModel: MahasiswaViewModel =
         viewModel(factory = MahasiswaViewModelFactory(MahasiswaRepository(db)))
@@ -92,7 +97,9 @@ fun MyApp() {
             BottomNavScreen.Search
         )
     }
-
+    LaunchedEffect(Unit) {
+        userViewModel.loadUserFromSession()
+    }
     Scaffold(
         bottomBar = {
             val route = navController.currentBackStackEntryAsState().value?.destination?.route
@@ -113,13 +120,15 @@ fun MyApp() {
         NavHost(
             navController = navController,
             startDestination = if (isOnboardingCompleted) {
-                BottomNavScreen.Login.route
+                "splash"
             } else {
                 "landing"
             },
             modifier = Modifier.padding(padding)
         ) {
-
+            composable ("splash"){
+                SplashScreen(sessionManager = sessionManager, navController = navController)
+            }
             // ⭐ LANDING PAGE / ONBOARDING
             composable("landing") {
                 LandingPage(

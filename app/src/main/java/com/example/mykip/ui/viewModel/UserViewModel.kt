@@ -8,14 +8,17 @@ import androidx.lifecycle.viewModelScope
 import com.example.mykip.data.User
 import com.example.mykip.viewmodel.RiwayatDanaViewModel
 import com.example.mykip.data.RiwayatDana
+import com.example.mykip.data.SessionManager
 import com.example.mykip.repository.UserRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 class UserViewModel(
-    private val repository: UserRepository // KEEPED for compatibility (even unused)
+    private val repository: UserRepository,
+    private val sessionManager: SessionManager// KEEPED for compatibility (even unused)
 ) : ViewModel() {
 
     private val auth = FirebaseAuth.getInstance()
@@ -85,7 +88,22 @@ class UserViewModel(
                 .await()
         }
     }
+    fun loadUserFromSession() {
+        viewModelScope.launch {
+            // Get the saved email from SessionManager. first() gets the current value.
+            val userEmail = sessionManager.userEmailFlow.first()
+            if (userEmail != null) {
+                // If an email is found in the session, fetch the full user object
+                val snap = db.collection("users")
+                    .whereEqualTo("email", userEmail)
+                    .get()
+                    .await()
 
+                // Set the loggedInUser with the data from Firestore
+                loggedInUser = snap.documents.firstOrNull()?.toObject(User::class.java)
+            }
+        }
+    }
     // LOGIN (nim + password → convert to email internally)
     fun login(email: String, password: String) {
         if (email.isBlank() || password.isBlank()) {
@@ -111,6 +129,7 @@ class UserViewModel(
             try {
                 auth.signInWithEmailAndPassword(user.email, password).await()
                 loggedInUser = user
+                sessionManager.saveLoginSession(user.email)
                 uiState = UiState(isSuccess = true)
             } catch (e: Exception) {
                 uiState = UiState(error = "Auth failed: ${e.message}")
@@ -243,9 +262,7 @@ class UserViewModel(
 
                 db.collection("users").document(uid).set(newUser).await()
 
-                loggedInUser = newUser
-
-                uiState = UiState(false, true, "Registration successful")
+                uiState = UiState(false, true, "Registration successful! Proceed to login")
             } catch (e: Exception) {
                 uiState = UiState(false, false, "Registration failed: ${e.message}")
             }
@@ -256,8 +273,13 @@ class UserViewModel(
 
     // LOGOUT
     fun logout() {
-        auth.signOut()
-        loggedInUser = null
-        resetState()
+        viewModelScope.launch {
+            // 🔥 CLEAR THE SESSION
+            sessionManager.clearLoginSession()
+            auth.signOut()
+            loggedInUser = null
+            // Reset any other relevant state
+            resetState()
+        }
     }
 }
