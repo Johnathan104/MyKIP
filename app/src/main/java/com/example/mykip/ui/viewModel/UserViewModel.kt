@@ -169,7 +169,7 @@ class UserViewModel(
                 .update("balance", newBalance)
                 .await()
 
-            riwayatViewModel.insertRiwayat(nim, jumlah, true, keterangan)
+            riwayatViewModel.tambahRiwayat(nim, jumlah, keterangan, "Transfer kepada Mahasiswa", true)
 
             if (loggedInUser?.nim == nim) loadUser(nim)
         }
@@ -206,7 +206,7 @@ class UserViewModel(
                 .update("balance", newBalance)
                 .await()
 
-            riwayatViewModel.insertRiwayat(nim, jumlah, false, keterangan)
+            riwayatViewModel.tambahRiwayat(nim, jumlah, keterangan, "Transfer oleh Mahasiswa", false)
 
             uiState = UiState(false, true, "Berhasil melakukan penarikan")
 
@@ -246,7 +246,19 @@ class UserViewModel(
             return
         }
 
+
+
         viewModelScope.launch {
+            if (isMahasiswa){
+                val snap = db.collection("users")
+                    .whereEqualTo("nim", nim)
+                    .whereEqualTo("role", "mahasiswa")
+                    .get()
+                    .await()
+                if (!snap.isEmpty()) {
+                    uiState = UiState(false, false, "NIM sudah terdaftar")
+                    return@launch}
+            }
             uiState = UiState(isLoading = true)
 
             try {

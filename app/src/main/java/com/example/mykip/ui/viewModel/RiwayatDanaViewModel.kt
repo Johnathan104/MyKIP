@@ -25,7 +25,8 @@ class RiwayatDanaViewModel(
         nim: String,
         jumlah: Int,
         keterangan: String,
-        jenis: String
+        jenis: String,
+        goingIn:Boolean =false,
     ) {
         val data = hashMapOf(
             "nim" to nim,

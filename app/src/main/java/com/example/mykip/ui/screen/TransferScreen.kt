@@ -61,12 +61,17 @@ fun TransferScreen(
                 val nominal = jumlah.toIntOrNull() ?: return@Button
 
                 if (isMahasiswa) {
-                    mahasiswaViewModel.transferMahasiswa(
+//                    mahasiswaViewModel.transferMahasiswa(
+//                        nim = user.nim,
+//                        jumlah = nominal,
+//                        keterangan = keterangan,
+//                        riwayatViewModel = riwayatViewModel
+//                    )
+                    userViewModel.penarikan(
                         nim = user.nim,
                         jumlah = nominal,
                         keterangan = keterangan,
-                        riwayatViewModel = riwayatViewModel
-                    )
+                        riwayatViewModel = riwayatViewModel)
                 }
 
                 if (isOrtu) {
