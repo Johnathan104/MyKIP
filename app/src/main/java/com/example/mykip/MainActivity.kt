@@ -72,7 +72,7 @@ fun MyApp() {
 
 
     val userViewModel: UserViewModel =
-        viewModel(factory = UserViewModelFactory(UserRepository(), sessionManager) )
+        viewModel(factory = UserViewModelFactory(UserRepository(), sessionManager, db) )
 
     val mahasiswaViewModel: MahasiswaViewModel =
         viewModel(factory = MahasiswaViewModelFactory(MahasiswaRepository(db)))
@@ -241,7 +241,8 @@ fun MyApp() {
                 ProfileDetailScreen(
                     navController = navController,
                     viewModel = userViewModel,
-                    mahasiswaViewModel = mahasiswaViewModel
+                    mahasiswaViewModel = mahasiswaViewModel,
+                    userViewModel = userViewModel
                 )
             }
 

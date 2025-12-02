@@ -1,8 +1,10 @@
 package com.example.mykip.repository
 
+import com.example.mykip.data.Mahasiswa
 import com.example.mykip.data.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 
 class UserRepository {
 

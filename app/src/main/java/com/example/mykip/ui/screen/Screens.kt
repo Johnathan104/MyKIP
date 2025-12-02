@@ -586,7 +586,8 @@ fun SettingItem(icon: Int, text: String, onClick: () -> Unit) {
 fun ProfileDetailScreen(
     navController: NavController,
     viewModel: UserViewModel,
-    mahasiswaViewModel: MahasiswaViewModel
+    mahasiswaViewModel: MahasiswaViewModel,
+    userViewModel: UserViewModel
 ) {
     val user = viewModel.loggedInUser
 
@@ -649,7 +650,13 @@ fun ProfileDetailScreen(
                                 nama = editableNama,
                                 nim = editableNim
                             )
+                            val updatedUser = user!!.copy(
+                                nama = editableNama,
+                                nim = editableNim
+                            )
+                            viewModel.update(updatedUser)
                             mahasiswaViewModel.update(updated)
+                            userViewModel.update(updatedUser)
                         }
                     }
                 }

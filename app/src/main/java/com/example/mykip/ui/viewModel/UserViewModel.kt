@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.mykip.data.Mahasiswa
 import com.example.mykip.data.User
 import com.example.mykip.viewmodel.RiwayatDanaViewModel
 import com.example.mykip.data.RiwayatDana
@@ -18,11 +19,13 @@ import kotlinx.coroutines.tasks.await
 
 class UserViewModel(
     private val repository: UserRepository,
+    private val firestore: FirebaseFirestore,
     private val sessionManager: SessionManager// KEEPED for compatibility (even unused)
 ) : ViewModel() {
 
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
+    private val collection = firestore.collection("users")
 
     var uiState by mutableStateOf(UiState())
         private set
@@ -267,6 +270,19 @@ class UserViewModel(
                 uiState = UiState(false, false, "Registration failed: ${e.message}")
             }
         }
+    }
+     fun update(user: User) {
+         viewModelScope.launch{
+             val snap = db.collection("users")
+                 .whereEqualTo("email", user.email)
+                 .get()
+                 .await()
+             db.collection("users")
+                 .document(snap.documents.first().id)
+                 .set(user)
+                 .await()
+
+         }
     }
 
 
