@@ -26,6 +26,7 @@ class UserViewModel(
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
     private val collection = firestore.collection("users")
+    var userAnak:User? by mutableStateOf(null)
 
     var uiState by mutableStateOf(UiState())
         private set
@@ -271,6 +272,17 @@ class UserViewModel(
             }
         }
     }
+    fun getAnakUser(user:User){
+        viewModelScope.launch{
+            val snap = db.collection("users")
+                .whereEqualTo("nim", user.nim)
+                .whereEqualTo("role", "mahasiswa")
+                .get()
+                .await()
+            userAnak = snap.documents.firstOrNull()?.toObject(User::class.java)
+
+        }
+    }
      fun update(user: User) {
          viewModelScope.launch{
              val snap = db.collection("users")
@@ -284,6 +296,7 @@ class UserViewModel(
 
          }
     }
+
 
 
 

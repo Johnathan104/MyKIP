@@ -139,7 +139,15 @@ fun HomeScreen(
     }
 
     val totalSaldo =
-        if (isMahasiswa) "Rp. ${user!!.balance}" else "-"
+        if (isMahasiswa) "Rp. ${user!!.balance}" else {
+            viewModel.getAnakUser(user!!)
+            if(viewModel.userAnak != null){
+                "Rp. ${viewModel.userAnak!!.balance}"
+
+            }else{
+                "Rp. ---"
+            }
+        }
 
     LazyColumn(
         modifier = Modifier
@@ -171,6 +179,7 @@ fun HomeScreen(
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(8.dp)
             ) {
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -601,14 +610,25 @@ fun ProfileDetailScreen(
     // Editable fields
     var editableNama by remember { mutableStateOf("") }
     var editableNim by remember { mutableStateOf("") }
-
+    var anakNama by remember{mutableStateOf("Kosong/ salah nim")}
     LaunchedEffect(Unit) {
         if (isMahasiswa || isOrtu) {
+            if(isOrtu){
+                editableNama = user.nama
+                editableNim = user.nim
+            }
             mahasiswaViewModel.getByNim(user!!.nim) { mhs ->
                 currentMahasiswa = mhs
                 if (mhs != null) {
-                    editableNama = mhs.nama
-                    editableNim = mhs.nim
+
+                    if(isOrtu)
+                    {
+                        anakNama = mhs.nama
+
+                    }else{
+                        editableNama = mhs.nama
+                        editableNim = user.nim
+                    }
                 }
             }
         } else {
@@ -644,20 +664,24 @@ fun ProfileDetailScreen(
             TextButton(onClick = {
                 if (isEditing) {
                     // SAVE
-                    if (isMahasiswa || isOrtu) {
+                    if (isMahasiswa) {
                         currentMahasiswa?.let { mhs ->
                             val updated = mhs.copy(
                                 nama = editableNama,
-                                nim = editableNim
                             )
                             val updatedUser = user!!.copy(
                                 nama = editableNama,
-                                nim = editableNim
                             )
-                            viewModel.update(updatedUser)
                             mahasiswaViewModel.update(updated)
                             userViewModel.update(updatedUser)
                         }
+                    }
+                    if(isOrtu){
+                        val updated = user.copy(
+                            nama = editableNama,
+                            nim = editableNim
+                        )
+                        userViewModel.update(updated)
                     }
                 }
 
@@ -690,12 +714,16 @@ fun ProfileDetailScreen(
         Text("E-mail")
         ReadOnlyField(displayedEmail)
         Spacer(Modifier.height(14.dp))
-
+        if(isOrtu) {
+            Text("Nama Anak")
+            ReadOnlyField(anakNama)
+            Spacer(Modifier.height(14.dp))
+        }
         // NIM
         Text(if (isOrtu) "NIM Anak" else "NIM")
         EditableField(
             value = editableNim,
-            enabled = isEditing && !isOrtu, // Ortu tidak boleh edit NIM anak
+            enabled = isEditing && isOrtu, // anak tidak boleh ganti nim sendiri sementar ortu bisa ganti nim sesuai dengan nim anaknya
             onChange = { editableNim = it }
         )
         Spacer(Modifier.height(14.dp))
