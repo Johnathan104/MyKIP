@@ -9,4 +9,23 @@
     <string name="choose_language">Choose Language</string>
     <string name="indonesian">Indonesian</string>
     <string name="english">English</string>
+
+    <!-- Settings Menu -->
+    <string name="setting_profile">My Profile</string>
+    <string name="setting_general">General Settings</string>
+    <string name="setting_help">Help Center</string>
+    <string name="setting_logout">Log Out</string>
+
+    <!-- Profile -->
+    <string name="profile_name">Name</string>
+    <string name="profile_email">Email</string>
+    <string name="profile_child_name">Child Name</string>
+    <string name="profile_nim_child">Child NIM</string>
+    <string name="profile_nim">NIM</string>
+    <string name="profile_role">Role</string>
+
+    <!-- Buttons -->
+    <string name="btn_save">Save</string>
+    <string name="btn_edit">Edit</string>
+    <string name="btn_cancel">Cancel</string>
 </resources>

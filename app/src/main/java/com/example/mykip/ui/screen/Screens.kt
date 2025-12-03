@@ -73,6 +73,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.ui.res.stringResource
 import com.example.mykip.MyKIPApp
 import com.example.mykip.data.LanguagePreference
+import com.example.mykip.data.User
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -83,17 +84,17 @@ import java.util.Locale
 
 @Composable
 fun HomeScreen(
-    navController:NavController,
+    navController: NavController,
     viewModel: UserViewModel,
     orangTuaViewModel: OrangTuaViewModel,
     mahasiswaViewModel: MahasiswaViewModel,
-    riwayatViewModel: RiwayatDanaViewModel,)
-{
+    riwayatViewModel: RiwayatDanaViewModel,
+) {
     val user = viewModel.loggedInUser
 
     val isOrtu = user?.role == "orangTua"
     val isAdmin = user?.role == "admin"
-    val isMahasiswa = user?.role =="mahasiswa"
+    val isMahasiswa = user?.role == "mahasiswa"
 
     // ======================================
     // LOAD DATA
@@ -101,19 +102,25 @@ fun HomeScreen(
     var mahasiswaList by remember { mutableStateOf(emptyList<Mahasiswa>()) }
     var riwayatList by remember { mutableStateOf(emptyList<RiwayatDana>()) }
     var currentMahasiswa by remember { mutableStateOf<Mahasiswa?>(null) }
+    var userList by remember { mutableStateOf(emptyList<User>()) }
+
+    LaunchedEffect(Unit) {
+        viewModel.getAllUsers { userList = it }   // pastikan kamu punya fungsi ini
+    }
 
     LaunchedEffect(Unit) {
         // ambil semua mahasiswa
         mahasiswaViewModel.getAll { mahasiswaList = it }
+
         // Mahasiswa → ambil berdasarkan nim user
         mahasiswaViewModel.getByNim(user!!.nim) { mhs ->
             currentMahasiswa = mhs
         }
 
+        // Ambil riwayat berdasarkan user
         riwayatViewModel.getByNim(user!!.nim) {
             riwayatList = it
         }
-
     }
 
     val jumlahAnak = mahasiswaList.size
@@ -122,7 +129,7 @@ fun HomeScreen(
 
     val displayedNama = when {
         isMahasiswa -> currentMahasiswa?.nama ?: "-"
-        isOrtu -> user?.nama ?: "-"       // Nama orang tua
+        isOrtu -> user?.nama ?: "-"
         isAdmin -> user?.nama ?: "-"
         else -> "-"
     }
@@ -130,14 +137,14 @@ fun HomeScreen(
     val displayedEmail = user?.email ?: "-"
 
     val displayedNim = when {
-        isMahasiswa -> user?.nim ?: "-"   // NIM mahasiswa
-        isAdmin -> user?.nim ?: "-"       // Admin boleh melihat NIM user
-        else -> "-"                       // Ortu tidak pakai NIM pribadi
+        isMahasiswa -> user?.nim ?: "-"
+        isAdmin -> user?.nim ?: "-"
+        else -> "-"
     }
 
     val displayedNimAnak = when {
-        isOrtu -> currentMahasiswa?.nim ?: "-"   // NIM anak
-        else -> "-"                              // Mahasiswa & admin tidak tampil NIM anak
+        isOrtu -> currentMahasiswa?.nim ?: "-"
+        else -> "-"
     }
 
     val displayedRole = when {
@@ -149,10 +156,9 @@ fun HomeScreen(
     val totalSaldo =
         if (isMahasiswa) "Rp. ${user!!.balance}" else {
             viewModel.getAnakUser(user!!)
-            if(viewModel.userAnak != null){
+            if (viewModel.userAnak != null) {
                 "Rp. ${viewModel.userAnak!!.balance}"
-
-            }else{
+            } else {
                 "Rp. ---"
             }
         }
@@ -164,7 +170,6 @@ fun HomeScreen(
             .padding(horizontal = 20.dp),
         contentPadding = PaddingValues(bottom = 20.dp)
     ) {
-
 
         item {
             Spacer(modifier = Modifier.height(24.dp))
@@ -180,6 +185,9 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(20.dp))
         }
 
+        // ============================
+        // CARD SALDO
+        // ============================
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -210,13 +218,10 @@ fun HomeScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         )
-                        // displayedRole = role yang sudah di-format (contoh: "Mahasiswa", "Admin", dll)
 
                         val finalRoleText = if (displayedRole.lowercase() == "mahasiswa") {
-                            // Jika mahasiswa → tambahkan jenjang
                             "${displayedRole} ${currentMahasiswa?.jenjang ?: "-"}"
                         } else {
-                            // Jika bukan mahasiswa → tampilkan role saja
                             displayedRole
                         }
 
@@ -224,7 +229,6 @@ fun HomeScreen(
                             text = finalRoleText,
                             style = MaterialTheme.typography.bodyMedium.copy(color = Color.White)
                         )
-
 
                         Spacer(modifier = Modifier.height(18.dp))
 
@@ -246,13 +250,31 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(30.dp))
         }
 
-        // 🔹 Item pertama: Grid
+        // ============================
+        // DASHBOARD ADMIN (NEW)
+        // ============================
+        if (isAdmin) {
+            item {
+                AdminSummaryDashboard(
+                    mahasiswaList = mahasiswaList,
+                    riwayatList = riwayatList,
+                    userList = userList
+                )
+            }
+        }
+
+        // ============================
+        // GRID MENU
+        // ============================
         item {
-            FeatureGrid(navController)
+            FeatureGrid(navController, userRole = user.role)
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        // 🔹 Item berikutnya: Judul
+
+        // ============================
+        // TITLE RIWAYAT
+        // ============================
         item {
             Text(
                 text = "Riwayat Transaksi",
@@ -262,7 +284,9 @@ fun HomeScreen(
             )
         }
 
-        // 🔹 Semua item riwayat
+        // ============================
+        // LIST RIWAYAT
+        // ============================
         items(riwayatList) { r ->
             RiwayatItemStyled(r)
         }
@@ -271,10 +295,84 @@ fun HomeScreen(
     }
 }
 
+@Composable
+fun AdminSummaryDashboard(
+    mahasiswaList: List<Mahasiswa>,
+    riwayatList: List<RiwayatDana>,
+    userList: List<User>
+) {
+    val totalMahasiswa = mahasiswaList.size
+    val totalTransaksi = riwayatList.size
+
+    val totalDanaMasuk = riwayatList.filter { it.goingIn }.sumOf { it.jumlah }
+    val totalDanaKeluar = riwayatList.filter { !it.goingIn }.sumOf { it.jumlah }
+
+    // saldo dari tabel user
+    val totalSaldoMahasiswa = userList
+        .filter { it.role == "mahasiswa" }
+        .sumOf { it.balance }
+
+    val averageSaldo = if (totalMahasiswa > 0) {
+        totalSaldoMahasiswa / totalMahasiswa
+    } else 0
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 20.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(6.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+
+            Text(
+                "Dashboard Ringkasan Admin",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold
+                )
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            SummaryRow("Total Mahasiswa", totalMahasiswa.toString())
+            SummaryRow("Total Transaksi", totalTransaksi.toString())
+            SummaryRow("Total Dana Masuk", "Rp. $totalDanaMasuk")
+            SummaryRow("Total Dana Keluar", "Rp. $totalDanaKeluar")
+            SummaryRow("Total Saldo Mahasiswa", "Rp. $totalSaldoMahasiswa")
+            SummaryRow("Rata-rata Saldo", "Rp. $averageSaldo")
+        }
+    }
+}
 
 
 @Composable
-fun FeatureGrid(navController:NavController) {
+fun SummaryRow(title: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(title, fontWeight = FontWeight.Medium)
+        Text(value, fontWeight = FontWeight.Bold)
+    }
+}
+
+
+
+
+@Composable
+fun FeatureGrid(
+    navController: NavController,
+    userRole: String // <-- tambahkan ini
+) {
+
+    // ❌ Jika bukan mahasiswa → tidak tampil apa pun
+    if (userRole != "mahasiswa") {
+        return
+    }
+
     val features = listOf(
         FeatureItem("Transfer", R.drawable.ic_transfer, Color(0xFFFF3366), destination = "transfer"),
         FeatureItem("Transaction report", R.drawable.ic_report, Color(0xFF6C5CE7), destination = "kelolaDana")
@@ -284,7 +382,7 @@ fun FeatureGrid(navController:NavController) {
         columns = GridCells.Fixed(3),
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(max = 2000.dp),   // ✔ menetapkan batas tinggi
+            .heightIn(max = 2000.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
         horizontalArrangement = Arrangement.spacedBy(18.dp),
         contentPadding = PaddingValues(bottom = 80.dp)
@@ -296,8 +394,8 @@ fun FeatureGrid(navController:NavController) {
                     .background(Color.White, shape = RoundedCornerShape(18.dp))
                     .padding(vertical = 18.dp, horizontal = 12.dp)
                     .fillMaxWidth()
-                    .clickable{
-                        if(item.destination != ""){
+                    .clickable {
+                        if (item.destination.isNotEmpty()) {
                             navController.navigate(item.destination)
                         }
                     },
@@ -326,11 +424,10 @@ fun FeatureGrid(navController:NavController) {
                     color = Color.Black
                 )
             }
-
-
         }
     }
 }
+
 
 @Composable
 fun RiwayatItemStyled(r: RiwayatDana) {
@@ -481,19 +578,19 @@ fun ProfileScreen(
         // ============================
         SettingItem(
             icon = R.drawable.ic_profile,
-            text = "Profil Saya",
+            text = stringResource(id = R.string.setting_profile),
             onClick = { navController.navigate("profileDetail") }
         )
 
         SettingItem(
             icon = R.drawable.ic_setting,
-            text = "Pengaturan Umum",
+            text = stringResource(id = R.string.setting_general),
             onClick = { navController.navigate("pengaturanUmum") }
         )
 
         SettingItem(
             icon = R.drawable.ic_help,
-            text = "Pusat Bantuan",
+            text = stringResource(id = R.string.setting_help),
             onClick = { /*TODO*/ }
         )
 
@@ -512,7 +609,7 @@ fun ProfileScreen(
             modifier = Modifier
                 .fillMaxWidth()
         ) {
-            Text("Log Out", color = Color.White, fontWeight = FontWeight.Bold)
+            Text(stringResource(id = R.string.setting_logout), color = Color.White, fontWeight = FontWeight.Bold)
         }
 
         Spacer(Modifier.height(40.dp))
@@ -674,21 +771,21 @@ fun ProfileDetailScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            Text("Name")
+            Text(stringResource(id = R.string.profile_name))
             EditableField(value = editableNama, enabled = isEditing, onChange = { editableNama = it })
             Spacer(Modifier.height(14.dp))
 
-            Text("E-mail")
+            Text(stringResource(id = R.string.profile_email))
             ReadOnlyField(displayedEmail)
             Spacer(Modifier.height(14.dp))
 
             if (isOrtu) {
-                Text("Nama Anak")
+                Text(stringResource(id = R.string.profile_child_name))
                 ReadOnlyField(anakNama)
                 Spacer(Modifier.height(14.dp))
             }
 
-            Text(if (isOrtu) "NIM Anak" else "NIM")
+            Text(if (isOrtu) stringResource(id = R.string.profile_nim_child) else "NIM")
             EditableField(
                 value = editableNim,
                 enabled = isEditing && isOrtu,
@@ -696,7 +793,7 @@ fun ProfileDetailScreen(
             )
             Spacer(Modifier.height(14.dp))
 
-            Text("Role")
+            Text(stringResource(id = R.string.profile_role))
             ReadOnlyField(displayedRole)
         }
     }
@@ -761,22 +858,22 @@ fun PengaturanUmumScreen(
         // ========== PENGATURAN APLIKASI ==========
 
         SettingRow(
-            text = "Bahasa Aplikasi",
+            text = stringResource(id = R.string.language),
             onClick = { showLanguageDialog = true }
         )
 
         SettingRow(
-            text = "Kebijakan Privasi",
+            text = stringResource(id = R.string.privacy_policy),
             onClick = { /* TODO */ }
         )
 
         SettingRow(
-            text = "Tentang Aplikasi",
+            text = stringResource(id = R.string.about_app),
             onClick = { /* TODO */ }
         )
 
         SettingRowWithEndText(
-            text = "Versi",
+            text = stringResource(id = R.string.version),
             endText = "1.0.0",
             onClick = {}
         )
@@ -790,18 +887,18 @@ fun LanguageDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Pilih Bahasa") },
+        title = { Text(stringResource(id = R.string.choose_language)) },
         text = {
             Column {
                 Text(
-                    "Indonesia",
+                    stringResource(id = R.string.indonesian),
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onSelect("id") }
                         .padding(12.dp)
                 )
                 Text(
-                    "English",
+                    stringResource(id = R.string.english),
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onSelect("en") }
