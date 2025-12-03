@@ -7,6 +7,8 @@ import com.google.firebase.Timestamp
 data class RiwayatDana(
     val id: Int = 0,
     val nim: String="",
+    val jenis: String = "", // <--- ini penting
+    val status: String = "",         // pending / approved / rejected
     val tanggal: Timestamp = Timestamp.now(),
     val goingIn: Boolean=false,
     val jumlah: Int=0,

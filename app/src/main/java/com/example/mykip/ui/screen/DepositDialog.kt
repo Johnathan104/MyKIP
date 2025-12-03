@@ -1,17 +1,16 @@
-package com.example.mykip.ui.screen
-
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import java.text.NumberFormat
+import java.util.Locale
 
 @Composable
 fun DepositDialog(
@@ -20,36 +19,64 @@ fun DepositDialog(
 ) {
     var jumlahText by remember { mutableStateOf("") }
     var keterangan by remember { mutableStateOf("") }
+    var isPressed by remember { mutableStateOf(false) }
+
+    val scale by animateFloatAsState(if (isPressed) 0.95f else 1f)
+
+    // Fungsi format ribuan untuk tampilkan di UI
+    fun formatRupiah(value: String): String {
+        val num = value.replace(".", "").toIntOrNull() ?: 0
+        return if (num == 0) "" else NumberFormat.getNumberInstance(Locale("id", "ID")).format(num)
+    }
+
+    // Ambil nilai Int dari input yang sudah diformat
+    fun parseInput(value: String): Int = value.replace(".", "").toIntOrNull() ?: 0
 
     AlertDialog(
-        onDismissRequest = { onDismiss() },
-        title = { Text("Setor Dana") },
+        onDismissRequest = onDismiss,
+        title = { Text("Setor Dana", style = MaterialTheme.typography.titleMedium) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 OutlinedTextField(
-                    value = jumlahText,
+                    value = formatRupiah(jumlahText),
                     onValueChange = { jumlahText = it },
-                    label = { Text("Jumlah (Rp)") }
+                    label = { Text("Jumlah (Rp)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 OutlinedTextField(
                     value = keterangan,
                     onValueChange = { keterangan = it },
-                    label = { Text("Keterangan") }
+                    label = { Text("Keterangan") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         },
         confirmButton = {
-            Button(onClick = {
-                val jumlahInt = jumlahText.toIntOrNull() ?: 0
-                onSubmit(jumlahInt, keterangan)
-            }) {
+            Button(
+                onClick = { onSubmit(parseInput(jumlahText), keterangan) },
+                modifier = Modifier
+                    .scale(scale)
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
                 Text("Simpan")
             }
         },
         dismissButton = {
-            Button(onClick = onDismiss) {
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .scale(scale)
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray)
+            ) {
                 Text("Batal")
             }
         }

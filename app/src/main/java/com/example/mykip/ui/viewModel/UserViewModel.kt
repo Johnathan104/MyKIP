@@ -1,5 +1,6 @@
 package com.example.mykip.ui.viewModel
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -151,11 +152,13 @@ class UserViewModel(
     ) {
         viewModelScope.launch {
             val admin = loggedInUser
-            val isAdmin = admin?.role =="admin"
+            val isAdmin = admin?.role == "admin"
             if (isAdmin != true) return@launch
 
+            // Query user dengan NIM + role = mahasiswa
             val snap = db.collection("users")
                 .whereEqualTo("nim", nim)
+                .whereEqualTo("role", "mahasiswa") // <-- filter role
                 .get()
                 .await()
 
@@ -169,11 +172,18 @@ class UserViewModel(
                 .update("balance", newBalance)
                 .await()
 
-            riwayatViewModel.tambahRiwayat(nim, jumlah, keterangan, "Transfer kepada Mahasiswa", true)
+            riwayatViewModel.tambahRiwayat(
+                nim,
+                jumlah,
+                keterangan,
+                "Transfer kepada Mahasiswa",
+                true
+            )
 
             if (loggedInUser?.nim == nim) loadUser(nim)
         }
     }
+
 
     // PENARIKAN
     fun penarikan(
@@ -186,6 +196,7 @@ class UserViewModel(
         viewModelScope.launch {
             val snapshot = db.collection("users")
                 .whereEqualTo("nim", nim)
+                .whereEqualTo("role", "mahasiswa")   // <-- NEW CONDITION
                 .get()
                 .await()
 
@@ -195,18 +206,29 @@ class UserViewModel(
             uiState = UiState(true, false)
 
             if (user.balance < jumlah) {
-                uiState = UiState(false, false, "Dana tidak mencukupi untuk penarikan")
+                uiState = UiState(
+                    isLoading = false,
+                    isSuccess = false,
+                    message = "Dana tidak mencukupi untuk penarikan"
+                )
                 return@launch
             }
 
             val newBalance = user.balance - jumlah
 
+// Update the matched document
+            val userDocId = snapshot.documents.first().id
+
             db.collection("users")
-                .document(snapshot.documents.first().id)
+                .document(userDocId)
                 .update("balance", newBalance)
                 .await()
 
             riwayatViewModel.tambahRiwayat(nim, jumlah, keterangan, "Transfer oleh Mahasiswa", false)
+
+            val successMsg = "Transfer sejumlah Rp.$jumlah berhasil."
+            Log.i("TransferDebug", "Success: $successMsg")
+            uiState = UiState(isSuccess = true, message = successMsg)
 
             uiState = UiState(false, true, "Berhasil melakukan penarikan")
 

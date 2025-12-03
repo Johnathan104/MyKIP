@@ -435,6 +435,15 @@ fun RiwayatItemStyled(r: RiwayatDana) {
     val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
     val tanggalFormatted = dateFormat.format(r.tanggal.toDate())
 
+    // Menentukan jenis transaksi berdasarkan field 'jenis'
+    val jenisTransaksi = when (r.jenis) {
+        "Transfer kepada Mahasiswa" -> "Pemasukan"
+        "Transfer oleh Mahasiswa" -> "Pengeluaran"
+        else -> if (r.goingIn) "Pemasukan" else "Pengeluaran"
+    }
+
+    val colorJumlah = if (jenisTransaksi == "Pemasukan") Color(0xFF2ECC71) else Color(0xFFE74C3C)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -463,12 +472,12 @@ fun RiwayatItemStyled(r: RiwayatDana) {
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = if (r.goingIn) "Pemasukan" else "Pengeluaran",
+                text = jenisTransaksi,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp
             )
             Text(
-                text = r.keterangan,
+                text = r.keterangan, // tetap menampilkan keterangan asli
                 fontSize = 14.sp,
                 color = Color.Gray
             )
@@ -480,13 +489,14 @@ fun RiwayatItemStyled(r: RiwayatDana) {
         }
 
         Text(
-            text = (if (r.goingIn) "+Rp " else "-Rp ") + r.jumlah.toString(),
-            color = if (r.goingIn) Color(0xFF2ECC71) else Color(0xFFE74C3C),
+            text = (if (jenisTransaksi == "Pemasukan") "+Rp " else "-Rp ") + r.jumlah.toString(),
+            color = colorJumlah,
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp
         )
     }
 }
+
 
 // Item bullet point
 @Composable

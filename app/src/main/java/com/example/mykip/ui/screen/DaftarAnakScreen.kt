@@ -1,5 +1,6 @@
 package com.example.mykip.ui.screen
 
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -56,28 +57,36 @@ fun DaftarAnakScreen(
 
     LaunchedEffect(mahasiswaList, userList, riwayatList) {
         if (mahasiswaList.isNotEmpty() && userList.isNotEmpty()) {
-            val mahasiswaNonAdmin = mahasiswaList.filter { mhs ->
-                val tiedUser = userList.find { it.nim == mhs.nim }
-                tiedUser?.role == "mahasiswa"
-            }
+            anakList = mahasiswaList.mapNotNull { mhs ->
+                val tiedUser = userList.find { it.nim == mhs.nim && it.role == "mahasiswa" }
+                if (tiedUser != null) {
+                    val riwayatMhs = riwayatList.filter { it.nim == mhs.nim }
 
-            anakList = mahasiswaNonAdmin.map { mhs ->
-                val tiedUser = userList.find { it.nim == mhs.nim }
-                val danaMasuk = tiedUser?.balance ?: 0
-                val riwayatMhs = riwayatList.filter { it.nim == mhs.nim }
-                val danaKeluar = riwayatMhs.filter { !it.goingIn }.sumOf { it.jumlah }
+                    val danaMasuk = riwayatMhs
+                        .filter { it.jenis == "Transfer kepada Mahasiswa" }
+                        .sumOf { it.jumlah }
 
-                AnakUI(
-                    nim = mhs.nim,
-                    nama = mhs.nama,
-                    jurusan = mhs.jurusan,
-                    danaTersisa = danaMasuk,
-                    danaTerpakai = danaKeluar,
-                    photoResId = mhs.photoResId
-                )
+                    val danaTerpakai = riwayatMhs
+                        .filter { it.jenis == "Transfer oleh Mahasiswa" }
+                        .sumOf { it.jumlah }
+
+                    val danaTersisa = danaMasuk - danaTerpakai
+
+                    AnakUI(
+                        nim = mhs.nim,
+                        nama = mhs.nama,
+                        jurusan = mhs.jurusan,
+                        danaTersisa = danaTersisa,
+                        danaTerpakai = danaTerpakai,
+                        photoResId = mhs.photoResId
+                    )
+
+                } else null
             }
         }
     }
+
+
 
     val filteredList = anakList.filter {
         it.nama.contains(query, true) ||
@@ -193,6 +202,14 @@ fun CardMahasiswaUI(anak: AnakUI, onClick: () -> Unit) {
 
 @Composable
 fun DanaBadge(label: String, value: Int) {
+    // Animasi perubahan nilai
+    val animatedValue by animateIntAsState(
+        targetValue = value,
+        animationSpec = androidx.compose.animation.core.tween(
+            durationMillis = 800
+        )
+    )
+
     Surface(
         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
         shape = RoundedCornerShape(12.dp)
@@ -207,8 +224,9 @@ fun DanaBadge(label: String, value: Int) {
                     color = MaterialTheme.colorScheme.primary
                 )
             )
+            // Format angka dengan titik ribuan
             Text(
-                "Rp $value",
+                "Rp ${"%,.0f".format(animatedValue.toFloat())}",
                 style = MaterialTheme.typography.bodySmall.copy(
                     fontWeight = FontWeight.Bold
                 )
@@ -216,4 +234,5 @@ fun DanaBadge(label: String, value: Int) {
         }
     }
 }
+
 

@@ -1,5 +1,6 @@
 package com.example.mykip.ui.screen
 
+import DepositDialog
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -175,12 +176,13 @@ fun DetailAnakScreen(
                                         )
 
                                         // Badge pemasukan/pengeluaran
-                                        val badgeColor = if (item.goingIn)
+                                        val goingIn = item.jenis == "Transfer kepada Mahasiswa"
+                                        val badgeColor = if (goingIn)
                                             MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                                         else
                                             MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
 
-                                        val textColor = if (item.goingIn)
+                                        val textColor = if (goingIn)
                                             MaterialTheme.colorScheme.primary
                                         else
                                             MaterialTheme.colorScheme.error
@@ -190,15 +192,13 @@ fun DetailAnakScreen(
                                             shape = RoundedCornerShape(12.dp)
                                         ) {
                                             Text(
-                                                text = if (item.goingIn) "Pemasukan" else "Pengeluaran",
+                                                text = if (goingIn) "Pemasukan" else "Pengeluaran",
                                                 color = textColor,
-                                                modifier = Modifier.padding(
-                                                    horizontal = 10.dp,
-                                                    vertical = 4.dp
-                                                ),
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                                                 style = MaterialTheme.typography.bodySmall,
                                             )
                                         }
+
                                     }
 
                                     Spacer(Modifier.height(10.dp))
@@ -239,22 +239,28 @@ fun DetailAnakScreen(
         DepositDialog(
             onDismiss = { showWithdrawDialog = false },
             onSubmit = { jumlah, keterangan ->
+                // Tetap simpan jumlah asli (Int) ke database
                 userViewModel.penyetoran(
                     nim = anakNim,
                     jumlah = jumlah,
                     keterangan = keterangan,
                     riwayatViewModel = riwayatViewModel
                 )
+
+                // Tambahkan ke riwayatList lokal
                 riwayatList = riwayatList + RiwayatDana(
                     nim = anakNim,
-                    jumlah = jumlah,
+                    jumlah = jumlah, // jumlah asli tetap
                     keterangan = keterangan,
                     goingIn = true,
                     tanggal = getTodayDate()
                 )
+
+                // Tutup dialog
                 showWithdrawDialog = false
             }
         )
     }
+
 }
 

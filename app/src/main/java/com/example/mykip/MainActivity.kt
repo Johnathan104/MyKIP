@@ -255,7 +255,6 @@ fun MyApp() {
                 )
             }
 
-
             // ⭐ DETAIL ANAK
             composable(
                 route = "detailAnak/{anakId}",
