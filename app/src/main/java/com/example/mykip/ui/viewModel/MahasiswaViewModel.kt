@@ -46,6 +46,13 @@ class MahasiswaViewModel(
             }
     }
 
+    fun getMahasiswaByNim(nim: String, onResult: (Mahasiswa?) -> Unit) {
+        getByNim(nim) { mahasiswa ->
+            this.mahasiswa = mahasiswa
+            onResult(mahasiswa)
+        }
+    }
+
 
     var mahasiswa: Mahasiswa? by mutableStateOf(null)
         private set

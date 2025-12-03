@@ -250,9 +250,11 @@ fun MyApp() {
                 KelolaDanaScreen(
                     userViewModel = userViewModel,
                     riwayatViewModel = riwayatViewModel,
+                    mahasiswaViewModel = mahasiswaViewModel,
                     navController = navController
                 )
             }
+
 
             // ⭐ DETAIL ANAK
             composable(
@@ -298,12 +300,6 @@ fun MyApp() {
                     riwayatViewModel = riwayatViewModel
                 )
             }
-
-
-            composable("kelolaDana") {
-                KelolaDanaScreen(userViewModel, riwayatViewModel, navController)
-            }
-
         }
     }
 }
