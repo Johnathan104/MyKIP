@@ -1,6 +1,7 @@
 package com.example.mykip.ui.screen
 
 import DepositDialog
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -202,7 +203,18 @@ fun DetailAnakScreen(
                                     }
 
                                     Spacer(Modifier.height(10.dp))
+                                    var statusColor=  MaterialTheme.colorScheme.secondary
+                                    if(item.status == "approved")
+                                        statusColor = MaterialTheme.colorScheme.primary
+                                    if (item.status == "rejected")
+                                        statusColor = MaterialTheme.colorScheme.error
+                                    if(item.status != ""){
+                                        Text("Status: ${item.status}" , color = statusColor)
 
+                                    }
+                                    else{
+                                        Text("Status: pending", color=statusColor)
+                                    }
                                     Text("Jumlah: Rp ${item.jumlah}", fontWeight = FontWeight.Bold)
                                     Text("Keterangan: ${item.keterangan}")
 
@@ -223,6 +235,27 @@ fun DetailAnakScreen(
                                             )
                                         ) {
                                             Text("Hapus")
+                                        }
+                                        TextButton(
+                                            onClick = {
+                                                riwayatViewModel.statusRiwayatGanti(item.id, "approved", "admin")
+                                            },
+                                            colors = ButtonDefaults.textButtonColors(
+                                                contentColor = MaterialTheme.colorScheme.primary
+                                            )
+                                        ) {
+                                            Text("Terima")
+                                        }
+                                        TextButton(
+                                            onClick = {
+                                                riwayatViewModel.statusRiwayatGanti(item.id, "rejected", "admin")
+                                                Log.i("DetailAnakScreen", riwayatList.toString())
+                                            },
+                                            colors = ButtonDefaults.textButtonColors(
+                                                contentColor = MaterialTheme.colorScheme.secondary
+                                            )
+                                        ) {
+                                            Text("Tolak")
                                         }
                                     }
                                 }

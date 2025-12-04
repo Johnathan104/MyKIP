@@ -171,16 +171,16 @@ class UserViewModel(
                 .document(target.id)
                 .update("balance", newBalance)
                 .await()
-
             riwayatViewModel.tambahRiwayat(
                 nim,
                 jumlah,
                 keterangan,
                 "Transfer kepada Mahasiswa",
-                true
+                true,
+                loggedInUser!!.role
             )
 
-            if (loggedInUser?.nim == nim) loadUser(nim)
+            if (loggedInUser?.nim == nim) loadUserFromSession()
         }
     }
 
@@ -232,7 +232,8 @@ class UserViewModel(
 
             uiState = UiState(false, true, "Berhasil melakukan penarikan")
 
-            loadUser(nim)
+            loadUserFromSession()
+            loadUserFromSession()
         }
     }
 

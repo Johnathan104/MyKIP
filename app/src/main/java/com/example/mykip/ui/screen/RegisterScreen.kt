@@ -1,6 +1,7 @@
 // RegisterScreen.kt
 package com.example.mykip.ui.screen
 
+import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
@@ -14,6 +15,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -25,6 +28,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
@@ -33,6 +37,8 @@ import com.example.mykip.R
 import com.example.mykip.data.Mahasiswa
 import com.example.mykip.ui.viewModel.UserViewModel
 import com.example.mykip.viewmodel.*
+import com.google.firebase.Timestamp
+import java.text.SimpleDateFormat
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -50,6 +56,7 @@ fun RegisterScreen(
     var jurusan by remember { mutableStateOf("") }
     var jenjang by remember { mutableStateOf("") }
     var kuliah by remember { mutableStateOf("") }
+    var tanggalLahirString by remember { mutableStateOf("") }
 
     val jenjangOptions = listOf("S1", "D4", "D3")
 
@@ -73,6 +80,7 @@ fun RegisterScreen(
                     jurusan.isNotEmpty() &&
                     kuliah.isNotEmpty() &&
                     jenjang.isNotEmpty() &&
+                    tanggalLahirString.isNotEmpty() && // 2. ADD TO VALIDATION
                     email.isNotEmpty() &&
                     password.isNotEmpty() &&
                     isAgree
@@ -181,6 +189,7 @@ fun RegisterScreen(
                             if (tab == 0) {
                                 RoundedInput("Name", nama) { nama = it }
                                 RoundedInput("NIM", nim) { nim = it }
+                                RoundedInput("Tanggal Lahir (yyyy-mm-dd)", tanggalLahirString) { tanggalLahirString = it }
                                 RoundedInput("Jurusan", jurusan) { jurusan = it }
                                 RoundedInput("Kuliah", kuliah) { kuliah = it }
 
@@ -247,6 +256,20 @@ fun RegisterScreen(
                     Button(
                         onClick = {
                             val isMahasiswa = selectedTab == 0
+                            val timestampTanggalLahir = try {
+                                val sdf = SimpleDateFormat("yyyy-MM-dd")
+                                sdf.isLenient = false  // Prevents wrong dates like 2024-13-99
+
+                                val date = sdf.parse(tanggalLahirString)
+                                if (date != null) {
+                                    Timestamp(date)
+                                } else {
+                                    Timestamp.now()
+                                }
+                            } catch (e: Exception) {
+                                Log.e("RegisterScreen", "Date parsing error: ${e.message}")
+                                com.google.firebase.Timestamp.now() // fallback
+                            }
 
                             if (isMahasiswa) {
                                 userViewModel.register(
@@ -264,6 +287,7 @@ fun RegisterScreen(
                                         jenjang = jenjang,
                                         kuliah = kuliah,
                                         semester = 1,
+                                        tanggalLahir =timestampTanggalLahir,
                                         photoResId = R.drawable.avatar1
                                     )
                                 )

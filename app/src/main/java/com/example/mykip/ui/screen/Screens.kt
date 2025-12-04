@@ -118,8 +118,8 @@ fun HomeScreen(
         }
 
         // Ambil riwayat berdasarkan user
-        riwayatViewModel.getByNim(user!!.nim) {
-            riwayatList = it
+        riwayatViewModel.listenRiwayatByNim(user!!.nim) { list ->
+            riwayatList = list
         }
     }
 
@@ -667,7 +667,6 @@ fun SettingItem(icon: Int, text: String, onClick: () -> Unit) {
         modifier = Modifier.padding(start = 20.dp)
     )
 }
-
 @Composable
 fun ProfileDetailScreen(
     navController: NavController,
@@ -684,28 +683,45 @@ fun ProfileDetailScreen(
     var currentMahasiswa by remember { mutableStateOf<Mahasiswa?>(null) }
     var isEditing by remember { mutableStateOf(false) }
 
-    // Editable fields
+    // ---------------- Editable fields ----------------
     var editableNama by remember { mutableStateOf("") }
     var editableNim by remember { mutableStateOf("") }
-    var anakNama by remember{mutableStateOf("Kosong/ salah nim")}
+
+    // Mahasiswa-only fields
+    var editableAlamat by remember { mutableStateOf("") }
+    var editableEmailWali by remember { mutableStateOf("") }
+    var editableTanggalLahir by remember { mutableStateOf("") } // string for UI display
+
+    var anakNama by remember { mutableStateOf("Kosong / Salah NIM") }
+
+    // ---------------- Load initial data ----------------
     LaunchedEffect(Unit) {
         if (isMahasiswa || isOrtu) {
-            if(isOrtu){
-                editableNama = user.nama
+
+            if (isOrtu) {
+                editableNama = user!!.nama
                 editableNim = user.nim
             }
+
             mahasiswaViewModel.getByNim(user!!.nim) { mhs ->
                 currentMahasiswa = mhs
                 if (mhs != null) {
 
-                    if(isOrtu)
-                    {
-                        anakNama = mhs.nama
-
-                    }else{
+                    if (isMahasiswa) {
                         editableNama = mhs.nama
                         editableNim = user.nim
+                        if(mhs.alamat != null)
+                        editableAlamat = mhs.alamat
+                        if (mhs.emailWali != null)
+                        editableEmailWali = mhs.emailWali
+
+                        // convert timestamp → yyyy-MM-dd
+                        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                        if (mhs.tanggalLahir != null)
+                        editableTanggalLahir = sdf.format(mhs.tanggalLahir?.toDate())
                     }
+
+                    if (isOrtu) anakNama = mhs.nama
                 }
             }
         } else {
@@ -721,13 +737,14 @@ fun ProfileDetailScreen(
         else -> "Mahasiswa"
     }
 
+    // ================== UI ======================
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(bottom = 60.dp)
     ) {
 
-        // ---------------- HEADER (tidak ikut dicenter)
+        // ---------- HEADER ----------
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -739,37 +756,60 @@ fun ProfileDetailScreen(
                 Icon(Icons.Default.ArrowBack, contentDescription = "Back")
             }
 
+            // -------- SAVE / EDIT BUTTON --------
             TextButton(onClick = {
+
                 if (isEditing) {
-                    // SAVE LOGIC (biarkan sama)
-                    if (isMahasiswa) {
-                        currentMahasiswa?.let { mhs ->
-                            val updated = mhs.copy(nama = editableNama)
-                            val updatedUser = user!!.copy(nama = editableNama)
-                            mahasiswaViewModel.update(updated)
-                            userViewModel.update(updatedUser)
+                    // =============================
+                    //           SAVE LOGIC
+                    // =============================
+
+                    if (isMahasiswa && currentMahasiswa != null) {
+
+                        // Convert string → Timestamp
+                        val timestampTanggal = try {
+                            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                            val date = sdf.parse(editableTanggalLahir)
+                            if (date != null) com.google.firebase.Timestamp(date)
+                            else com.google.firebase.Timestamp.now()
+                        } catch (e: Exception) {
+                            com.google.firebase.Timestamp.now()
                         }
+
+                        val updatedMhs = currentMahasiswa!!.copy(
+                            nama = editableNama,
+                            alamat = editableAlamat,
+                            emailWali = editableEmailWali,
+                            tanggalLahir = timestampTanggal
+                        )
+
+                        val updatedUser = user!!.copy(nama = editableNama)
+
+                        mahasiswaViewModel.update(updatedMhs)
+                        userViewModel.update(updatedUser)
                     }
+
                     if (isOrtu) {
-                        val updated = user.copy(
+                        val updated = user!!.copy(
                             nama = editableNama,
                             nim = editableNim
                         )
                         userViewModel.update(updated)
                     }
                 }
+
                 isEditing = !isEditing
             }) {
                 Text(if (isEditing) "Selesai" else "Edit")
             }
         }
 
-        // ---------------- CONTENT (yang dicenter)
+        // ---------- CONTENT ----------
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.Center   // hanya ini yang center
+            verticalArrangement = Arrangement.Center
         ) {
 
             Text(
@@ -779,36 +819,69 @@ fun ProfileDetailScreen(
                 color = Color.Gray
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(Modifier.height(20.dp))
 
-            Text(stringResource(id = R.string.profile_name))
-            EditableField(value = editableNama, enabled = isEditing, onChange = { editableNama = it })
+            // ===============================
+            //           NAMA
+            // ===============================
+            Text("Nama")
+            EditableField(editableNama, isEditing, { editableNama = it })
             Spacer(Modifier.height(14.dp))
 
-            Text(stringResource(id = R.string.profile_email))
+            // ===============================
+            //           EMAIL (readonly)
+            // ===============================
+            Text("Email")
             ReadOnlyField(displayedEmail)
             Spacer(Modifier.height(14.dp))
 
             if (isOrtu) {
-                Text(stringResource(id = R.string.profile_child_name))
+                Text("Nama Anak")
                 ReadOnlyField(anakNama)
                 Spacer(Modifier.height(14.dp))
             }
 
-            Text(if (isOrtu) stringResource(id = R.string.profile_nim_child) else "NIM")
+            // ===============================
+            //           NIM
+            // ===============================
+            Text(if (isOrtu) "NIM Anak" else "NIM")
             EditableField(
-                value = editableNim,
+                editableNim,
                 enabled = isEditing && isOrtu,
                 onChange = { editableNim = it }
             )
             Spacer(Modifier.height(14.dp))
 
-            Text(stringResource(id = R.string.profile_role))
+            // =========================================================
+            //               MAHASISWA-ONLY EXTRA FIELDS
+            // =========================================================
+            if (isMahasiswa) {
+
+                // ---------- Alamat ----------
+                Text("Alamat")
+                EditableField(editableAlamat, isEditing) { editableAlamat = it }
+                Spacer(Modifier.height(14.dp))
+
+                // ---------- Email Wali ----------
+                Text("Email Wali")
+                EditableField(editableEmailWali, isEditing) { editableEmailWali = it }
+                Spacer(Modifier.height(14.dp))
+
+                // ---------- Tanggal Lahir ----------
+                Text("Tanggal Lahir (yyyy-MM-dd)")
+                EditableField(editableTanggalLahir, isEditing) { editableTanggalLahir = it }
+                Spacer(Modifier.height(14.dp))
+            }
+
+            // ===============================
+            //         ROLE (read only)
+            // ===============================
+            Text("Role")
             ReadOnlyField(displayedRole)
         }
     }
-
 }
+
 
 @Composable
 fun PengaturanUmumScreen(

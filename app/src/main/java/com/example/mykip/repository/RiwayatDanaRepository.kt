@@ -2,6 +2,7 @@ package com.example.mykip.repository
 
 import com.example.mykip.data.RiwayatDana
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
 
@@ -25,17 +26,41 @@ class RiwayatDanaRepository(
 
         return snapshot.toObjects(RiwayatDana::class.java).sortedBy{it.tanggal}
     }
+    fun listenByNimRealtime(nim: String, onDataChanged: (List<RiwayatDana>) -> Unit): ListenerRegistration {
+        return collection
+            .whereEqualTo("nim", nim)
+            .addSnapshotListener { snapshot, error ->
+
+                if (error != null || snapshot == null) {
+                    onDataChanged(emptyList())
+                    return@addSnapshotListener
+                }
+
+                val list = snapshot
+                    .toObjects(RiwayatDana::class.java)
+                    .sortedByDescending { it.tanggal } // newest first
+
+                onDataChanged(list)
+            }
+    }
 
     suspend fun getByNim(nim: String): List<RiwayatDana> {
-        val snapshot = collection
-            .whereEqualTo("nim", nim)
-            .get()
-            .await()
+        return try {
+            val snapshot = collection
+                .whereEqualTo("nim", nim)
+                .get()
+                .await()
 
-        // 🔥 Handle "no riwayat for this NIM"
-        if (snapshot.isEmpty) return emptyList()
-
-        return snapshot.toObjects(RiwayatDana::class.java).sortedBy{it.tanggal}
+            if (snapshot.isEmpty) {
+                emptyList()
+            } else {
+                snapshot.toObjects(RiwayatDana::class.java)
+                    .sortedBy { it.tanggal } // ascending
+            }
+        } catch (e: Exception) {
+            // If Firestore throws missing index error or offline state
+            emptyList()
+        }
     }
 
     suspend fun delete(riwayatDana: RiwayatDana) {

@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 import com.google.firebase.Timestamp
 
 data class RiwayatDana(
-    val id: Int = 0,
+    var id: String = "",
     val nim: String="",
     val jenis: String = "", // <--- ini penting
     val status: String = "",         // pending / approved / rejected

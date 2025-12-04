@@ -1,12 +1,16 @@
 package com.example.mykip.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mykip.data.Mahasiswa
 import com.example.mykip.data.RiwayatDana
 import com.example.mykip.repository.RiwayatDanaRepository
+import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -17,8 +21,28 @@ import java.util.Locale
 class RiwayatDanaViewModel(
     private val repository: RiwayatDanaRepository
 ) : ViewModel() {
+    private val firestore = Firebase.firestore
+    private val collection = firestore.collection("riwayat")
     fun getTodayDate(): Timestamp {
         return Timestamp(Date()) // Create a new Timestamp from the current Date
+    }
+    fun statusRiwayatGanti(
+        riwayatDanaId: String,
+        status: String,
+        userRole: String = "mahasiswa"
+    ) {
+        if (userRole != "admin") return
+
+        // Update field "status" in Firestore
+        collection
+            .document(riwayatDanaId)
+            .update("status", status)
+            .addOnSuccessListener {
+                Log.d("RiwayatDanaRepo", "Status updated to $status for $riwayatDanaId")
+            }
+            .addOnFailureListener { e ->
+                Log.e("RiwayatDanaRepo", "Failed to update status", e)
+            }
     }
 
     fun tambahRiwayat(
@@ -27,12 +51,17 @@ class RiwayatDanaViewModel(
         keterangan: String,
         jenis: String,
         goingIn:Boolean =false,
+        userRole: String = "mahasiswa"
     ) {
+        val status = if (userRole != "admin") "pending" else "approved"
+
         val data = hashMapOf(
             "nim" to nim,
+            "goingIn" to goingIn,
             "jumlah" to jumlah,
             "keterangan" to keterangan,
             "jenis" to jenis,
+            "status" to status,
             "timestamp" to System.currentTimeMillis()
         )
 
@@ -51,10 +80,24 @@ class RiwayatDanaViewModel(
     }
 
     fun getByNim(nim: String, onResult: (List<RiwayatDana>) -> Unit) {
-        viewModelScope.launch {
-            onResult(repository.getByNim(nim))
-        }
+        collection
+            .whereEqualTo("nim", nim)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null || snapshot == null) {
+                    onResult(emptyList())
+                    return@addSnapshotListener
+                }
+
+                val list = snapshot.documents.map { doc ->
+                    var item = doc.toObject(RiwayatDana::class.java)
+                    item?.id = doc.id   // 🔥 attach the actual Firestore document ID
+                    item!!
+                }.sortedBy { it.tanggal }
+
+                onResult(list)
+            }
     }
+
 
     fun insertRiwayat(nim: String, jumlah: Int, masuk: Boolean, keterangan: String) {
         viewModelScope.launch {
@@ -71,6 +114,20 @@ class RiwayatDanaViewModel(
         }
     }
 
+    private var listener: ListenerRegistration? = null
+
+    fun listenRiwayatByNim(nim: String, onUpdate: (List<RiwayatDana>) -> Unit) {
+        listener?.remove() // remove old listener if exists
+
+        listener = repository.listenByNimRealtime(nim) { list ->
+            onUpdate(list)
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        listener?.remove()
+    }
 
 
     fun delete(riwayatDana: RiwayatDana) {
