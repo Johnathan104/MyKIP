@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 
 data class User(
     @PrimaryKey
-    val uid: String = "",        // default value so Firestore can create User()
+    var uid: String = "",        // default value so Firestore can create User()
     val nim: String = "",
     val nama: String = "",
     val email: String = "",

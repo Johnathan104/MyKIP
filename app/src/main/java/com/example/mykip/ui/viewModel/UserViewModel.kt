@@ -23,6 +23,26 @@ class UserViewModel(
     private val firestore: FirebaseFirestore,
     private val sessionManager: SessionManager// KEEPED for compatibility (even unused)
 ) : ViewModel() {
+    fun getMahasiswaByWali(waliEmail: String, onResult: (List<User>) -> Unit) {
+        db.collection("users")
+            .whereEqualTo("role", "mahasiswa")
+            .whereEqualTo("emailWali", waliEmail)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) {
+                    onResult(emptyList())
+                    Log.i("anakList", "Error fetching anak list: $error")
+                    return@addSnapshotListener
+                }
+                Log.i("anakList", "being snapshotted: $waliEmail")
+                val list = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(User::class.java)?.apply {
+                        uid = doc.id      // if you have ID field, fill it here
+                    }
+                }
+
+                onResult(list)
+            }
+    }
 
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()

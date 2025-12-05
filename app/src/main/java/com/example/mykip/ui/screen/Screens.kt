@@ -2,6 +2,7 @@ package com.example.mykip.ui.screen
 
 import android.app.Activity
 import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -68,6 +69,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.ui.res.stringResource
@@ -81,7 +84,6 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 
-
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -90,6 +92,63 @@ fun HomeScreen(
     mahasiswaViewModel: MahasiswaViewModel,
     riwayatViewModel: RiwayatDanaViewModel,
 ) {
+    // --- WORKING AnakDropdown ---
+    @Composable
+    fun AnakDropdown(
+        anakList: List<Mahasiswa>,
+        selectedAnak: Mahasiswa?,
+        onSelect: (Mahasiswa) -> Unit
+    ) {
+        var expanded by remember { mutableStateOf(false) }
+
+        Column {
+            OutlinedTextField(
+                value = selectedAnak?.nama ?: (if (anakList.isEmpty()) "Belum ada anak" else "Pilih Anak"),
+                onValueChange = {}, // readOnly, so no-op
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { if (anakList.isNotEmpty()) expanded = !expanded }, // textfield itself toggles
+                readOnly = true,
+                enabled = true,
+                trailingIcon = {
+                    IconButton(onClick = { if (anakList.isNotEmpty()) expanded = !expanded }) {
+                        Icon(
+                            imageVector = if (expanded)
+                                androidx.compose.material.icons.Icons.Filled.ArrowDropUp
+                            else
+                                androidx.compose.material.icons.Icons.Filled.ArrowDropDown,
+                            contentDescription = null
+                        )
+                    }
+                }
+            )
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                if (anakList.isEmpty()) {
+                    DropdownMenuItem(
+                        text = { Text("Tidak ada anak yang terdaftar") },
+                        onClick = { expanded = false }
+                    )
+                } else {
+                    anakList.forEach { anak ->
+                        DropdownMenuItem(
+                            text = { Text(anak.nama) },
+                            onClick = {
+                                expanded = false
+                                onSelect(anak)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     val user = viewModel.loggedInUser
 
     val isOrtu = user?.role == "orangTua"
@@ -97,39 +156,72 @@ fun HomeScreen(
     val isMahasiswa = user?.role == "mahasiswa"
 
     // ======================================
-    // LOAD DATA
+    // STATES
     // ======================================
     var mahasiswaList by remember { mutableStateOf(emptyList<Mahasiswa>()) }
+    var anakList by remember { mutableStateOf(emptyList<Mahasiswa>()) }
+    var selectedAnak by remember { mutableStateOf<Mahasiswa?>(null) }
+
     var riwayatList by remember { mutableStateOf(emptyList<RiwayatDana>()) }
     var currentMahasiswa by remember { mutableStateOf<Mahasiswa?>(null) }
     var userList by remember { mutableStateOf(emptyList<User>()) }
 
+    // ======================================
+    // LOAD USER LIST (ADMIN DASHBOARD)
+    // ======================================
     LaunchedEffect(Unit) {
-        viewModel.getAllUsers { userList = it }   // pastikan kamu punya fungsi ini
+        viewModel.getAllUsers { userList = it }
     }
 
+    // ======================================
+    // LOAD MAHASISWA LIST
+    // ======================================
     LaunchedEffect(Unit) {
-        // ambil semua mahasiswa
-        mahasiswaViewModel.getAll { mahasiswaList = it }
+        mahasiswaViewModel.getAll { list ->
+            mahasiswaList = list
 
-        // Mahasiswa → ambil berdasarkan nim user
-        mahasiswaViewModel.getByNim(user!!.nim) { mhs ->
-            currentMahasiswa = mhs
+            if (isOrtu && user != null) {
+                // anak: mahasiswa with emailWali == user.email
+                anakList = list.filter { it.emailWali == user.email }
+                Log.i("anaklist", anakList.toString())
+            }
         }
 
-        // Ambil riwayat berdasarkan user
-        riwayatViewModel.listenRiwayatByNim(user!!.nim) { list ->
-            riwayatList = list
+        if (isMahasiswa || isAdmin) {
+            // Mahasiswa → get based on user's nim
+            mahasiswaViewModel.getByNim(user!!.nim) { mhs ->
+                currentMahasiswa = mhs
+            }
+
+            // Auto-load riwayat for mahasiswa/admin (their own nim)
+            riwayatViewModel.listenRiwayatByNim(user!!.nim) { list ->
+                riwayatList = list
+            }
         }
     }
 
-    val jumlahAnak = mahasiswaList.size
+    // ======================================
+    // LOAD RIWAYAT WHEN ORTU SELECTS ANAK
+    // ======================================
+    LaunchedEffect(selectedAnak) {
+        if (isOrtu && selectedAnak != null) {
+            riwayatViewModel.listenRiwayatByNim(selectedAnak!!.nim) { list ->
+                riwayatList = list
+            }
+        } else if (isOrtu && selectedAnak == null) {
+            // Clear riwayat until an anak is chosen
+            riwayatList = emptyList()
+        }
+    }
+
+    // ===== DISPLAY VALUES =====
+    val jumlahAnak = anakList.size
     val transaksiMasuk = riwayatList.count { it.goingIn }
     val transaksiKeluar = riwayatList.count { !it.goingIn }
 
     val displayedNama = when {
         isMahasiswa -> currentMahasiswa?.nama ?: "-"
-        isOrtu -> user?.nama ?: "-"
+        isOrtu -> selectedAnak?.nama ?: "Pilih Anak"
         isAdmin -> user?.nama ?: "-"
         else -> "-"
     }
@@ -139,11 +231,7 @@ fun HomeScreen(
     val displayedNim = when {
         isMahasiswa -> user?.nim ?: "-"
         isAdmin -> user?.nim ?: "-"
-        else -> "-"
-    }
-
-    val displayedNimAnak = when {
-        isOrtu -> currentMahasiswa?.nim ?: "-"
+        isOrtu -> selectedAnak?.nim ?: "-"
         else -> "-"
     }
 
@@ -152,17 +240,22 @@ fun HomeScreen(
         isAdmin -> "Admin"
         else -> "Mahasiswa"
     }
+    val selectedBalance = selectedAnak?.let { anak ->
+        userList.firstOrNull { it.nim == anak.nim && it.role == "mahasiswa" }?.balance
+    }
 
     val totalSaldo =
-        if (isMahasiswa) "Rp. ${user!!.balance}" else {
-            viewModel.getAnakUser(user!!)
-            if (viewModel.userAnak != null) {
-                "Rp. ${viewModel.userAnak!!.balance}"
-            } else {
-                "Rp. ---"
-            }
+        if (isMahasiswa) {
+            "Rp. ${user!!.balance}"
+        } else if (isOrtu) {
+            if (selectedAnak != null) "Rp. $selectedBalance" else "Rp. ---"
+        } else {
+            if (viewModel.userAnak != null) "Rp. ${viewModel.userAnak!!.balance}" else "Rp. ---"
         }
 
+    // ========================================================
+    // ========================= UI ===========================
+    // ========================================================
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -183,6 +276,25 @@ fun HomeScreen(
             )
 
             Spacer(modifier = Modifier.height(20.dp))
+        }
+
+        // ============================
+        // ORANG TUA → Anak Selector
+        // ============================
+        if (isOrtu) {
+            item {
+                Text("Pilih Anak", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                AnakDropdown(
+                    anakList = anakList,
+                    selectedAnak = selectedAnak,
+                    onSelect = { selectedAnak = it }
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+            }
         }
 
         // ============================
@@ -219,14 +331,8 @@ fun HomeScreen(
                             )
                         )
 
-                        val finalRoleText = if (displayedRole.lowercase() == "mahasiswa") {
-                            "${displayedRole} ${currentMahasiswa?.jenjang ?: "-"}"
-                        } else {
-                            displayedRole
-                        }
-
                         Text(
-                            text = finalRoleText,
+                            text = displayedRole,
                             style = MaterialTheme.typography.bodyMedium.copy(color = Color.White)
                         )
 
@@ -251,7 +357,7 @@ fun HomeScreen(
         }
 
         // ============================
-        // DASHBOARD ADMIN (NEW)
+        // ADMIN DASHBOARD
         // ============================
         if (isAdmin) {
             item {
@@ -267,10 +373,9 @@ fun HomeScreen(
         // GRID MENU
         // ============================
         item {
-            FeatureGrid(navController, userRole = user.role)
+            FeatureGrid(navController, userRole = user!!.role)
             Spacer(modifier = Modifier.height(12.dp))
         }
-
 
         // ============================
         // TITLE RIWAYAT
@@ -294,6 +399,7 @@ fun HomeScreen(
         item { Spacer(modifier = Modifier.height(30.dp)) }
     }
 }
+
 
 @Composable
 fun AdminSummaryDashboard(
