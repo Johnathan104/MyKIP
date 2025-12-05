@@ -34,16 +34,6 @@ class RiwayatDanaViewModel(
         userRole: String = "mahasiswa"
     ) {
          viewModelScope.launch{
-             // Update status riwayat
-             collection.document(riwayatDanaId)
-                 .update("status", status)
-                 .addOnSuccessListener {
-                     Log.d("RiwayatDanaRepo", "Status updated to $status for $riwayatDanaId")
-                 }
-                 .addOnFailureListener { e ->
-                     Log.e("RiwayatDanaRepo", "Failed to update status", e)
-                 }
-
              // Ambil data riwayat dari Firestore
              val riwayatSnapshot = collection
                  .document(riwayatDanaId)
@@ -55,7 +45,18 @@ class RiwayatDanaViewModel(
              val prevstatus = riwayat.status
              val nimFromRiwayat = riwayat.nim      // <-- Nim diambil dari riwayatDana
              val amount = riwayat.jumlah
-             val goingIn = riwayat.goingIn        // true = saldo masuk, false = saldo keluar
+             val goingIn = riwayat.goingIn
+             // Update status riwayat
+             collection.document(riwayatDanaId)
+                 .update("status", status)
+                 .addOnSuccessListener {
+                     Log.d("RiwayatDanaRepo", "Status updated to $status for $riwayatDanaId")
+                 }
+                 .addOnFailureListener { e ->
+                     Log.e("RiwayatDanaRepo", "Failed to update status", e)
+                 }
+
+                   // true = saldo masuk, false = saldo keluar
 
              // Jika bukan admin → tidak boleh update saldo
              if (userRole != "admin") return@launch
@@ -75,17 +76,17 @@ class RiwayatDanaViewModel(
 
 
              // Hitung saldo baru berdasarkan goingIn
-             val newBalance = user.balance
+             var newBalance = user.balance
              if(status == "approved" && prevstatus != "approved"){
                  if (goingIn == false) {
-                     newBalance - amount
+                     newBalance -= amount
                  }
              }
-             if(status == "rejected" && prevstatus == "pending"){
+             if(status == "rejected" && prevstatus == "approved"){
                  if(goingIn == false){
-                     newBalance + amount
+                     newBalance += amount
                  }else{
-                     newBalance - amount
+                     newBalance -= amount
                  }
              }
 
@@ -95,7 +96,7 @@ class RiwayatDanaViewModel(
                  .update("balance", newBalance)
                  .await()
 
-             Log.d("RiwayatDanaRepo", "Balance updated to $newBalance for nim=$nimFromRiwayat")
+             Log.d("RiwayatDanaRepo", "status $status previous status $prevstatus , Balance updated to $newBalance for nim=$nimFromRiwayat")
          }
     }
 
