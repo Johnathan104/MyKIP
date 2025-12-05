@@ -237,12 +237,12 @@ class UserViewModel(
             val newBalance = user.balance - jumlah
 
 // Update the matched document
-            val userDocId = snapshot.documents.first().id
-
-            db.collection("users")
-                .document(userDocId)
-                .update("balance", newBalance)
-                .await()
+//            val userDocId = snapshot.documents.first().id
+//
+//            db.collection("users")
+//                .document(userDocId)
+//                .update("balance", newBalance)
+//                .await()
 
             riwayatViewModel.tambahRiwayat(nim, jumlah, keterangan, "Transfer oleh Mahasiswa", false)
 

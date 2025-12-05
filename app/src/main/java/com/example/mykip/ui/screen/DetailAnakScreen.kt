@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.mykip.data.*
 import com.example.mykip.ui.viewModel.UserViewModel
@@ -238,6 +239,7 @@ fun DetailAnakScreen(
                                         }
                                         TextButton(
                                             onClick = {
+
                                                 riwayatViewModel.statusRiwayatGanti(item.id, "approved", "admin")
                                             },
                                             colors = ButtonDefaults.textButtonColors(

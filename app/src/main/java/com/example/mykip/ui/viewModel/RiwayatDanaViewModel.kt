@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mykip.data.Mahasiswa
 import com.example.mykip.data.RiwayatDana
+import com.example.mykip.data.User
 import com.example.mykip.repository.RiwayatDanaRepository
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
@@ -14,6 +15,7 @@ import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -26,23 +28,75 @@ class RiwayatDanaViewModel(
     fun getTodayDate(): Timestamp {
         return Timestamp(Date()) // Create a new Timestamp from the current Date
     }
-    fun statusRiwayatGanti(
+     fun statusRiwayatGanti(
         riwayatDanaId: String,
         status: String,
         userRole: String = "mahasiswa"
     ) {
-        if (userRole != "admin") return
+         viewModelScope.launch{
+             // Update status riwayat
+             collection.document(riwayatDanaId)
+                 .update("status", status)
+                 .addOnSuccessListener {
+                     Log.d("RiwayatDanaRepo", "Status updated to $status for $riwayatDanaId")
+                 }
+                 .addOnFailureListener { e ->
+                     Log.e("RiwayatDanaRepo", "Failed to update status", e)
+                 }
 
-        // Update field "status" in Firestore
-        collection
-            .document(riwayatDanaId)
-            .update("status", status)
-            .addOnSuccessListener {
-                Log.d("RiwayatDanaRepo", "Status updated to $status for $riwayatDanaId")
-            }
-            .addOnFailureListener { e ->
-                Log.e("RiwayatDanaRepo", "Failed to update status", e)
-            }
+             // Ambil data riwayat dari Firestore
+             val riwayatSnapshot = collection
+                 .document(riwayatDanaId)
+                 .get()
+                 .await()
+
+             val riwayat = riwayatSnapshot.toObject(RiwayatDana::class.java)
+                 ?: return@launch
+             val prevstatus = riwayat.status
+             val nimFromRiwayat = riwayat.nim      // <-- Nim diambil dari riwayatDana
+             val amount = riwayat.jumlah
+             val goingIn = riwayat.goingIn        // true = saldo masuk, false = saldo keluar
+
+             // Jika bukan admin → tidak boleh update saldo
+             if (userRole != "admin") return@launch
+
+             // Cari user berdasarkan nim dari riwayat
+             val userSnapshot = firestore.collection("users")
+                 .whereEqualTo("nim", nimFromRiwayat)
+                 .whereEqualTo("role", "mahasiswa")
+                 .get()
+                 .await()
+
+             val userDoc = userSnapshot.documents.firstOrNull() ?: return@launch
+             val user = userDoc.toObject(User::class.java) ?: return@launch
+
+             val userDocId = userDoc.id
+
+
+
+             // Hitung saldo baru berdasarkan goingIn
+             val newBalance = user.balance
+             if(status == "approved" && prevstatus != "approved"){
+                 if (goingIn == false) {
+                     newBalance - amount
+                 }
+             }
+             if(status == "rejected" && prevstatus == "pending"){
+                 if(goingIn == false){
+                     newBalance + amount
+                 }else{
+                     newBalance - amount
+                 }
+             }
+
+             // Update balance user
+             firestore.collection("users")
+                 .document(userDocId)
+                 .update("balance", newBalance)
+                 .await()
+
+             Log.d("RiwayatDanaRepo", "Balance updated to $newBalance for nim=$nimFromRiwayat")
+         }
     }
 
     fun tambahRiwayat(
