@@ -21,6 +21,22 @@ import com.example.mykip.ui.viewModel.UserViewModel
 import com.example.mykip.R
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.delay
+import android.graphics.BitmapFactory
+import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Upload
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
+import com.example.mykip.utils.ImageConverter
+import com.google.firebase.firestore.FirebaseFirestore
 
 
 import com.example.mykip.viewmodel.*
@@ -33,6 +49,7 @@ fun TransferScreen(
     orangTuaViewModel: OrangTuaViewModel,
     riwayatViewModel: RiwayatDanaViewModel
 ) {
+    val context = LocalContext.current
     val user = userViewModel.loggedInUser ?: return
 
     val isOrtu = user.role == "orangTua"
@@ -45,7 +62,29 @@ fun TransferScreen(
     var buttonPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (buttonPressed) 0.95f else 1f)
 
+    var selectedImage by remember { mutableStateOf<ByteArray?>(null) }
+    var base64Image by remember { mutableStateOf<String?>(null) }
+
     var triggerTransfer by remember { mutableStateOf(false) }
+
+    // ⭐ Launcher pilih gambar
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri ->
+            uri?.let {
+                val stream = context.contentResolver.openInputStream(uri)
+                val bytes = stream?.readBytes()
+                selectedImage = bytes
+
+                if (bytes != null) {
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    base64Image = ImageConverter.bitmapToBase64(bitmap)
+                    Log.d("BASE64_RESULT", base64Image.toString().take(100)) // cek 100 karakter pertama
+                }
+            }
+        }
+    )
+
 
     LaunchedEffect(triggerTransfer) {
         if (triggerTransfer) {
@@ -157,45 +196,132 @@ fun TransferScreen(
                     shape = RoundedCornerShape(14.dp)
                 )
 
+                // ⭐ Input bukti transfer (gambar)
+                // ⭐ Gambar Bukti Transfer
+                Text(
+                    "Bukti Transfer",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                )
+
+                Spacer(Modifier.height(6.dp))
+
+// ========================
+// CARD UPLOAD GAMBAR
+// ========================
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(if (selectedImage == null) 160.dp else 200.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFFF2F4F7))
+                        .border(
+                            width = 1.dp,
+                            color = Color(0xFFBDBDBD),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .clickable { pickImageLauncher.launch("image/*") }
+                ) {
+
+                    if (selectedImage == null) {
+                        // Jika belum upload, tampilkan placeholder
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(20.dp),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                Icons.Default.Upload,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(40.dp)
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "Klik untuk upload bukti transfer",
+                                fontSize = 14.sp,
+                                color = Color.Gray
+                            )
+                        }
+
+                    } else {
+                        // Jika sudah upload tampilkan gambar
+                        AsyncImage(
+                            model = selectedImage,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.Black.copy(alpha = 0.1f)),
+                            contentDescription = "Preview Bukti",
+                            contentScale = ContentScale.Fit
+                        )
+
+
+
+                        // ❌ Tombol remove image
+                        IconButton(
+                            onClick = { selectedImage = null },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(6.dp)
+                                .size(28.dp)
+                                .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Hapus gambar",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+
                 Spacer(Modifier.height(28.dp))
+
 
                 // BUTTON TRANSFER + ANIMASI SCALE
                 Button(
                     onClick = {
-                        buttonPressed = true
-                        val nominal = jumlah.toIntOrNull() ?: return@Button
+                        val nominal = jumlah.toIntOrNull() ?: run {
+                            Toast.makeText(context, "Jumlah tidak valid!", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
 
+                        if (base64Image.isNullOrEmpty()) {
+                            Toast.makeText(context, "Silakan upload bukti transfer!", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        if (keterangan.isEmpty()) {
+                            Toast.makeText(context, "Isi keterangan terlebih dahulu!", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        // 👌 simpan riwayat langsung melalui ViewModel
                         if (isMahasiswa) {
                             userViewModel.penarikan(
                                 nim = user.nim,
                                 jumlah = nominal,
                                 keterangan = keterangan,
+                                buktiTransfer = base64Image!!,
                                 riwayatViewModel = riwayatViewModel
                             )
                         }
 
-                        if (isOrtu) {
-                            orangTuaViewModel.transferKeAnak(
-                                nimAnak = user.nim,
-                                jumlah = nominal,
-                                keterangan = keterangan,
-                                riwayatViewModel = riwayatViewModel
-                            )
-                        }
 
+                        Toast.makeText(context, "Berhasil mengajukan transfer", Toast.LENGTH_SHORT).show()
                         navController.popBackStack()
-                        triggerTransfer = true
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .graphicsLayer {
-                            scaleX = scale
-                            scaleY = scale
-                        },
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp)
                 ) {
-                    Text("Transfer", fontSize = 16.sp)
+                    Text("Transfer")
                 }
+
+
 
 
                 Spacer(Modifier.height(8.dp))

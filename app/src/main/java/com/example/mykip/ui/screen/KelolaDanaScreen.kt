@@ -78,8 +78,12 @@ fun KelolaDanaScreen(
         }
     }
 
-    val totalMasuk = riwayatList.filter { it.goingIn }.sumOf { it.jumlah }
-    val totalKeluar = riwayatList.filter { !it.goingIn }.sumOf { it.jumlah }
+    val totalMasuk = riwayatList
+        .filter { it.jenis == "Transfer kepada Mahasiswa" }
+        .sumOf { it.jumlah }
+    val totalKeluar = riwayatList
+        .filter { it.jenis == "Transfer oleh Mahasiswa" }
+        .sumOf { it.jumlah }
 
     // --- WRAP HALAMAN DALAM SCROLLABLE COLUMN ---
     Column(
@@ -169,9 +173,13 @@ fun KelolaDanaScreen(
 
         // DAFTAR JUGA DIMASUKKAN DALAM COLUMN SCROLL
         riwayatList.forEach { riwayat ->
-            RiwayatItemStyled(riwayat)
+            RiwayatItemStyled(
+                r = riwayat,
+                onClick = {}
+            )
             Spacer(Modifier.height(8.dp))
         }
+
     }
 }
 

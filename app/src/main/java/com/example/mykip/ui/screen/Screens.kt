@@ -1,10 +1,15 @@
 package com.example.mykip.ui.screen
 
 import android.app.Activity
+import android.graphics.BitmapFactory
+import android.util.Base64
+
 import android.content.Context
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import com.example.mykip.ui.theme.MyKIPTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -67,19 +73,25 @@ import com.example.mykip.viewmodel.RiwayatDanaViewModel
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.window.Dialog
+import coil.compose.AsyncImage
 import com.example.mykip.MyKIPApp
 import com.example.mykip.data.LanguagePreference
 import com.example.mykip.data.User
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -92,63 +104,6 @@ fun HomeScreen(
     mahasiswaViewModel: MahasiswaViewModel,
     riwayatViewModel: RiwayatDanaViewModel,
 ) {
-    // --- WORKING AnakDropdown ---
-    @Composable
-    fun AnakDropdown(
-        anakList: List<Mahasiswa>,
-        selectedAnak: Mahasiswa?,
-        onSelect: (Mahasiswa) -> Unit
-    ) {
-        var expanded by remember { mutableStateOf(false) }
-
-        Column {
-            OutlinedTextField(
-                value = selectedAnak?.nama ?: (if (anakList.isEmpty()) "Belum ada anak" else "Pilih Anak"),
-                onValueChange = {}, // readOnly, so no-op
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { if (anakList.isNotEmpty()) expanded = !expanded }, // textfield itself toggles
-                readOnly = true,
-                enabled = true,
-                trailingIcon = {
-                    IconButton(onClick = { if (anakList.isNotEmpty()) expanded = !expanded }) {
-                        Icon(
-                            imageVector = if (expanded)
-                                androidx.compose.material.icons.Icons.Filled.ArrowDropUp
-                            else
-                                androidx.compose.material.icons.Icons.Filled.ArrowDropDown,
-                            contentDescription = null
-                        )
-                    }
-                }
-            )
-
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier
-                    .fillMaxWidth()
-            ) {
-                if (anakList.isEmpty()) {
-                    DropdownMenuItem(
-                        text = { Text("Tidak ada anak yang terdaftar") },
-                        onClick = { expanded = false }
-                    )
-                } else {
-                    anakList.forEach { anak ->
-                        DropdownMenuItem(
-                            text = { Text(anak.nama) },
-                            onClick = {
-                                expanded = false
-                                onSelect(anak)
-                            }
-                        )
-                    }
-                }
-            }
-        }
-    }
-
     val user = viewModel.loggedInUser
 
     val isOrtu = user?.role == "orangTua"
@@ -160,9 +115,20 @@ fun HomeScreen(
     // ======================================
     var mahasiswaList by remember { mutableStateOf(emptyList<Mahasiswa>()) }
     var anakList by remember { mutableStateOf(emptyList<Mahasiswa>()) }
+
+    var selectedAnakIndex by remember { mutableStateOf(0) }
     var selectedAnak by remember { mutableStateOf<Mahasiswa?>(null) }
 
     var riwayatList by remember { mutableStateOf(emptyList<RiwayatDana>()) }
+
+    var sortNewestFirst by remember { mutableStateOf(true) }
+
+// APPLY SORTING DI SINI!
+    val sortedRiwayat = if (sortNewestFirst)
+        riwayatList.sortedByDescending { it.tanggal.seconds }
+    else
+        riwayatList.sortedBy { it.tanggal.seconds }
+
     var currentMahasiswa by remember { mutableStateOf<Mahasiswa?>(null) }
     var userList by remember { mutableStateOf(emptyList<User>()) }
 
@@ -205,14 +171,16 @@ fun HomeScreen(
     // ======================================
     LaunchedEffect(selectedAnak) {
         if (isOrtu && selectedAnak != null) {
+
             riwayatViewModel.listenRiwayatByNim(selectedAnak!!.nim) { list ->
-                riwayatList = list
+                riwayatList = list.sortedByDescending { it.timestamp } // default
             }
+
         } else if (isOrtu && selectedAnak == null) {
-            // Clear riwayat until an anak is chosen
             riwayatList = emptyList()
         }
     }
+
 
     // ===== DISPLAY VALUES =====
     val jumlahAnak = anakList.size
@@ -256,6 +224,9 @@ fun HomeScreen(
     // ========================================================
     // ========================= UI ===========================
     // ========================================================
+    var selectedRiwayat by remember { mutableStateOf<RiwayatDana?>(null) }
+    var showDetailBottomSheet by remember { mutableStateOf(false) }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -279,82 +250,146 @@ fun HomeScreen(
         }
 
         // ============================
-        // ORANG TUA → Anak Selector
-        // ============================
-        if (isOrtu) {
-            item {
-                Text("Pilih Anak", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                AnakDropdown(
-                    anakList = anakList,
-                    selectedAnak = selectedAnak,
-                    onSelect = { selectedAnak = it }
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-            }
-        }
-
-        // ============================
-        // CARD SALDO
-        // ============================
+// CARD SALDO
+// ============================
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
+            if (isOrtu && anakList.isNotEmpty()) {
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                listOf(
-                                    Color(0xFF304FFE),
-                                    Color(0xFF00BCD4),
-                                    Color(0xFF4CAF50)
-                                )
-                            )
-                        )
-                        .padding(20.dp)
+                Text("Saldo Anak", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {
-                    Column {
-                        Text(
-                            text = displayedNama,
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-                        )
+                    itemsIndexed(anakList) { index, anak ->
+                        val anakBalance = userList.firstOrNull { it.nim == anak.nim && it.role == "mahasiswa" }?.balance ?: 0
+                        val isSelected = selectedAnakIndex == index
 
-                        Text(
-                            text = displayedRole,
-                            style = MaterialTheme.typography.bodyMedium.copy(color = Color.White)
-                        )
+                        Card(
+                            modifier = Modifier
+                                .width(220.dp)
+                                .height(160.dp)
+                                .border(
+                                    width = if (isSelected) 3.dp else 0.dp,
+                                    color = if (isSelected) Color.Yellow else Color.Transparent,
+                                    shape = RoundedCornerShape(20.dp)
+                                )
+                                .clickable {
+                                    selectedAnakIndex = index
+                                    selectedAnak = anak
+                                },
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            elevation = CardDefaults.cardElevation(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = Brush.horizontalGradient(
+                                            listOf(
+                                                Color(0xFF304FFE),
+                                                Color(0xFF00BCD4),
+                                                Color(0xFF4CAF50)
+                                            )
+                                        )
+                                    )
+                                    .padding(16.dp)
+                            ) {
+                                Column {
+                                    Text(
+                                        text = anak.nama,
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    )
 
-                        Spacer(modifier = Modifier.height(18.dp))
+                                    Text(
+                                        text = "Mahasiswa",
+                                        style = MaterialTheme.typography.bodyMedium.copy(color = Color.White)
+                                    )
 
-                        Text("Total Saldo", color = Color.White)
+                                    Spacer(modifier = Modifier.height(18.dp))
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                                    Text("Total Saldo", color = Color.White)
+                                    Spacer(modifier = Modifier.height(12.dp))
 
-                        Text(
-                            text = totalSaldo,
-                            style = MaterialTheme.typography.headlineSmall.copy(
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-                        )
+                                    Text(
+                                        text = "Rp ${NumberFormat.getInstance(Locale("id", "ID")).format(anakBalance)}",
+                                        style = MaterialTheme.typography.titleLarge.copy(
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(30.dp))
+
+                Spacer(modifier = Modifier.height(30.dp))
+
+            } else {
+                // Mahasiswa/Admin → tampilkan single card seperti sebelumnya
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(8.dp)
+                ) {
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                brush = Brush.horizontalGradient(
+                                    listOf(
+                                        Color(0xFF304FFE),
+                                        Color(0xFF00BCD4),
+                                        Color(0xFF4CAF50)
+                                    )
+                                )
+                            )
+                            .padding(20.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = displayedNama,
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+
+                            Text(
+                                text = displayedRole,
+                                style = MaterialTheme.typography.bodyMedium.copy(color = Color.White)
+                            )
+
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            Text("Total Saldo", color = Color.White)
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Text(
+                                text = totalSaldo,
+                                style = MaterialTheme.typography.headlineSmall.copy(
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(30.dp))
+            }
         }
+
 
         // ============================
         // ADMIN DASHBOARD
@@ -381,22 +416,192 @@ fun HomeScreen(
         // TITLE RIWAYAT
         // ============================
         item {
-            Text(
-                text = "Riwayat Transaksi",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                Text(
+                    text = "Riwayat Transaksi",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                OutlinedButton(
+                    onClick = { sortNewestFirst = !sortNewestFirst },
+                    modifier = Modifier.height(38.dp)
+                ) {
+                    Text(
+                        if (sortNewestFirst) "Terbaru" else "Terlama",
+                        fontSize = 12.sp
+                    )
+                }
+            }
         }
+
 
         // ============================
         // LIST RIWAYAT
         // ============================
-        items(riwayatList) { r ->
-            RiwayatItemStyled(r)
+        items(
+            items = if (sortNewestFirst)
+                riwayatList.sortedByDescending { it.timestamp } // terbaru
+            else
+                riwayatList.sortedBy { it.timestamp }            // terlama
+        ) { r: RiwayatDana ->
+            RiwayatItemStyled(r) {
+                selectedRiwayat = r
+                showDetailBottomSheet = true
+            }
         }
 
+
+        item {
+            Spacer(modifier = Modifier.height(30.dp))
+        }
+
+
+
         item { Spacer(modifier = Modifier.height(30.dp)) }
+    }
+    // ============================
+// BOTTOM SHEET DETAIL
+// ============================
+    if (showDetailBottomSheet && selectedRiwayat != null) {
+        DetailRiwayatBottomSheet(
+            riwayat = selectedRiwayat!!,
+            onDismiss = { showDetailBottomSheet = false }
+        )
+    }
+}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DetailRiwayatBottomSheet(
+    riwayat: RiwayatDana,
+    onDismiss: () -> Unit
+) {
+    var showFullImage by remember { mutableStateOf(false) }
+
+    ModalBottomSheet(onDismissRequest = { onDismiss() }) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            Text(
+                "Detail Transaksi",
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            DetailRow("Jenis Transaksi", riwayat.jenis)
+            DetailRow("Jumlah", "Rp ${riwayat.jumlah}")
+            DetailRow("Keterangan", riwayat.keterangan)
+            DetailRow("Status", riwayat.status)
+
+            Spacer(Modifier.height(18.dp))
+
+            Text("Bukti Transfer", fontWeight = FontWeight.Bold)
+
+            Spacer(Modifier.height(10.dp))
+
+            val bitmap = decodeBase64ToBitmap(riwayat.bukti_transfer)
+
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = "Bukti Transfer",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(250.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable {
+                            showFullImage = true
+                        },
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Text("Tidak ada bukti transfer")
+            }
+
+            if (showFullImage) {
+                Dialog(onDismissRequest = { showFullImage = false }) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black),
+                    ) {
+                        Image(
+                            bitmap = bitmap!!.asImageBitmap(),
+                            contentDescription = "Fullscreen Bukti Transfer",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight(),
+                            contentScale = ContentScale.Fit
+                        )
+
+                        // ❌ Klik area hitam/luar menutup dialog IF desired
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clickable { showFullImage = false }
+                        )
+
+                        // ✔ Tombol Close di pojok kanan atas
+                        IconButton(
+                            onClick = { showFullImage = false },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(16.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close Fullscreen",
+                                tint = Color.White
+                            )
+                        }
+                    }
+                }
+            }
+
+
+
+            Spacer(Modifier.height(30.dp))
+
+            Button(
+                onClick = { onDismiss() },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Tutup")
+            }
+
+            Spacer(Modifier.height(30.dp))
+        }
+    }
+}
+
+@Composable
+fun DetailRow(title: String, value: String) {
+    Column(Modifier.padding(vertical = 6.dp)) {
+        Text(title, fontSize = 13.sp, color = Color.Gray)
+        Text(value, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+    }
+}
+
+fun decodeBase64ToBitmap(base64: String?): Bitmap? {
+    if (base64.isNullOrEmpty()) return null
+    return try {
+        val cleanBase64 = base64.replace("\n", "")
+        val decodedBytes = Base64.decode(cleanBase64, Base64.DEFAULT)
+        BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
     }
 }
 
@@ -534,14 +739,111 @@ fun FeatureGrid(
     }
 }
 
+@Composable
+fun HomeScreenWithRiwayatHorizontal(
+    userList: List<User>,
+    anakList: List<Mahasiswa>,
+    riwayatList: List<RiwayatDana>
+) {
+    // STATE untuk track card yang aktif
+    var selectedAnakIndex by remember { mutableStateOf(0) }
+
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp)
+    ) {
+        itemsIndexed(anakList) { index, anak ->
+            // Filter riwayat sesuai anak
+            val riwayatAnak = riwayatList.filter { it.nim == anak.nim }
+
+            Column(
+                modifier = Modifier
+                    .width(260.dp)
+                    .clickable { selectedAnakIndex = index }
+            ) {
+                // ===== CARD SALDO =====
+                val anakBalance = userList.firstOrNull { it.nim == anak.nim && it.role == "mahasiswa" }?.balance ?: 0
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (index == selectedAnakIndex) Color(0xFF1976D2) else Color.White
+                    ),
+                    elevation = CardDefaults.cardElevation(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                brush = Brush.horizontalGradient(
+                                    listOf(Color(0xFF304FFE), Color(0xFF00BCD4), Color(0xFF4CAF50))
+                                )
+                            )
+                            .padding(16.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = anak.nama,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                            Text(
+                                text = "Mahasiswa",
+                                style = MaterialTheme.typography.bodyMedium.copy(color = Color.White)
+                            )
+                            Spacer(modifier = Modifier.height(18.dp))
+                            Text("Total Saldo", color = Color.White)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "Rp ${NumberFormat.getInstance(Locale("id", "ID")).format(anakBalance)}",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // ===== RIWAYAT ANAK =====
+                Text(
+                    text = "Riwayat Transaksi",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .height(300.dp) // batasi tinggi riwayat per card
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    items(riwayatAnak) { r ->
+                        RiwayatItemStyled(r) { }
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
-fun RiwayatItemStyled(r: RiwayatDana) {
+fun RiwayatItemStyled(
+    r: RiwayatDana,
+    onClick: () -> Unit
+) {
 
     val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
     val tanggalFormatted = dateFormat.format(r.tanggal.toDate())
 
-    // Menentukan jenis transaksi berdasarkan field 'jenis'
     val jenisTransaksi = when (r.jenis) {
         "Transfer kepada Mahasiswa" -> "Pemasukan"
         "Transfer oleh Mahasiswa" -> "Pengeluaran"
@@ -556,6 +858,7 @@ fun RiwayatItemStyled(r: RiwayatDana) {
             .padding(12.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(Color.White)
+            .clickable { onClick() }
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

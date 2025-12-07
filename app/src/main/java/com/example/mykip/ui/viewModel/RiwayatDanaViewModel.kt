@@ -106,6 +106,7 @@ class RiwayatDanaViewModel(
         keterangan: String,
         jenis: String,
         goingIn:Boolean =false,
+        buktiTransfer: String?,            // 🔥 tambahkan ini
         userRole: String = "mahasiswa"
     ) {
         val status = if (userRole != "admin") "pending" else "approved"
@@ -117,8 +118,10 @@ class RiwayatDanaViewModel(
             "keterangan" to keterangan,
             "jenis" to jenis,
             "status" to status,
-            "timestamp" to System.currentTimeMillis()
+            "timestamp" to System.currentTimeMillis(),
+            "bukti_transfer" to buktiTransfer  // 🔥 field baru
         )
+
 
         FirebaseFirestore.getInstance()
             .collection("riwayat")

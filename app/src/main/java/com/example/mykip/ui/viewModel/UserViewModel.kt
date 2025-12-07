@@ -211,6 +211,7 @@ class UserViewModel(
         jumlah: Int,
         keterangan: String,
         riwayatViewModel: RiwayatDanaViewModel,
+        buktiTransfer: String,
         onError: (String?) -> Unit = {}
     ) {
         viewModelScope.launch {
@@ -244,7 +245,8 @@ class UserViewModel(
 //                .update("balance", newBalance)
 //                .await()
 
-            riwayatViewModel.tambahRiwayat(nim, jumlah, keterangan, "Transfer oleh Mahasiswa", false)
+            riwayatViewModel.tambahRiwayat(nim, jumlah, keterangan, "Transfer oleh Mahasiswa", false,        buktiTransfer = buktiTransfer             // 🔥 kirim ke database
+            )
 
             val successMsg = "Transfer sejumlah Rp.$jumlah berhasil."
             Log.i("TransferDebug", "Success: $successMsg")

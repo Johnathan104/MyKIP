@@ -3,6 +3,7 @@ package com.example.mykip.ui.screen
 import DepositDialog
 import android.util.Log
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -22,6 +24,7 @@ import com.example.mykip.ui.viewModel.UserViewModel
 import com.example.mykip.viewmodel.MahasiswaViewModel
 import com.example.mykip.viewmodel.RiwayatDanaViewModel
 import com.google.firebase.Timestamp
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -41,12 +44,15 @@ fun DetailAnakScreen(
     var mahasiswa by remember { mutableStateOf<Mahasiswa?>(null) }
     var riwayatList by remember { mutableStateOf<List<RiwayatDana>>(emptyList()) }
     var showWithdrawDialog by remember { mutableStateOf(false) }
-
+    var userList by remember { mutableStateOf(emptyList<User>()) }
     // Load data
     LaunchedEffect(anakNim) {
+        userViewModel.getAllUsers { userList = it }
         mahasiswaViewModel.getByNim(anakNim) { mahasiswa = it }
         riwayatViewModel.getByNim(anakNim) { riwayatList = it }
     }
+    var selectedRiwayat by remember { mutableStateOf<RiwayatDana?>(null) }
+    var showDetailSheet by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -81,46 +87,83 @@ fun DetailAnakScreen(
                 // ------------------ PROFILE CARD -------------------
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    elevation = CardDefaults.cardElevation(6.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant),
+                    elevation = CardDefaults.cardElevation(4.dp)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .padding(20.dp)
-                            .fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-
-                        Image(
-                            painter = painterResource(id = mhs.photoResId),
-                            contentDescription = mhs.nama,
-                            modifier = Modifier
-                                .size(100.dp)
-                                .padding(end = 20.dp)
-                                .clip(RoundedCornerShape(20.dp))
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            mhs.nama,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
-
-                        Column {
-                            Text(
-                                mhs.nama,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text("NIM: ${mhs.nim}", style = MaterialTheme.typography.bodyMedium)
-                            Text("Jurusan: ${mhs.jurusan}", style = MaterialTheme.typography.bodyMedium)
-                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text("NIM: ${mhs.nim}", style = MaterialTheme.typography.bodyMedium)
+                        Text("Jurusan: ${mhs.jurusan}", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
 
                 Spacer(Modifier.height(24.dp))
 
                 // ------------------ TITLE SECTION -------------------
+                // Hitung nilai dana
+                val tiedUser = userList.find { it.nim == mhs.nim && it.role == "mahasiswa" }
+
+                val danaMasuk = riwayatList
+                    .filter { it.jenis == "Transfer kepada Mahasiswa" }
+                    .sumOf { it.jumlah }
+
+                val danaTerpakai = riwayatList
+                    .filter { it.jenis == "Transfer oleh Mahasiswa" }
+                    .sumOf { it.jumlah }
+
+                val danaTersisa = tiedUser?.balance ?: 0
+
+                val formatter = NumberFormat.getInstance(Locale("id", "ID"))
+
+                Spacer(Modifier.height(16.dp))
+
+// ------------------ SUMMARY DANA -------------------
                 Text(
-                    "Riwayat Penggunaan Dana",
+                    "Ringkasan Dana",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
+
+                Spacer(Modifier.height(8.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(4.dp),
+                    colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Dana Masuk
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Dana Masuk", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                            Text("Rp $danaMasuk", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                        }
+
+                        // Dana Terpakai
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Dana Terpakai", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                            Text("Rp $danaTerpakai", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                        }
+
+                        // Dana Tersisa
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Dana Tersisa", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                            Text("Rp $danaTersisa", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
 
                 Spacer(Modifier.height(12.dp))
 
@@ -129,20 +172,24 @@ fun DetailAnakScreen(
                     onClick = { showWithdrawDialog = true },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(16.dp)
+                        .height(50.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Beri Dana", fontWeight = FontWeight.Bold)
+                    Text(
+                        "Beri Dana",
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold, color = Color.White)
+                    )
                 }
 
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(16.dp))
 
                 // ------------------ RIWAYAT LIST -------------------
                 if (riwayatList.isEmpty()) {
                     Text(
                         "Belum ada riwayat dana.",
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.secondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         ),
                         modifier = Modifier.padding(top = 10.dp)
                     )
@@ -151,123 +198,143 @@ fun DetailAnakScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        items(riwayatList) { item ->
+                        items(riwayatList.sortedByDescending { it.timestamp }) { item ->
 
                             Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(18.dp),
-                                elevation = CardDefaults.cardElevation(3.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedRiwayat = item
+                                        showDetailSheet = true
+                                    },
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface),
+                                elevation = CardDefaults.cardElevation(4.dp)
                             ) {
-                                Column(
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .fillMaxWidth()
-                                ) {
+                                val isIncoming = item.jenis == "Transfer kepada Mahasiswa"
 
-                                    // HEADER ROW
-                                    Row(
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text(
-                                            SimpleDateFormat(
-                                                "dd MMM yyyy • HH:mm",
-                                                Locale("id")
-                                            ).format(item.tanggal.toDate()),
-                                            fontWeight = FontWeight.SemiBold
-                                        )
+                                Column(modifier = Modifier.padding(16.dp)) {
 
-                                        // Badge pemasukan/pengeluaran
-                                        val goingIn = item.jenis == "Transfer kepada Mahasiswa"
-                                        val badgeColor = if (goingIn)
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                        else
-                                            MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
-
-                                        val textColor = if (goingIn)
-                                            MaterialTheme.colorScheme.primary
-                                        else
-                                            MaterialTheme.colorScheme.error
-
-                                        Surface(
-                                            color = badgeColor,
-                                            shape = RoundedCornerShape(12.dp)
-                                        ) {
-                                            Text(
-                                                text = if (goingIn) "Pemasukan" else "Pengeluaran",
-                                                color = textColor,
-                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                                style = MaterialTheme.typography.bodySmall,
-                                            )
-                                        }
-
-                                    }
-
-                                    Spacer(Modifier.height(10.dp))
-                                    var statusColor=  MaterialTheme.colorScheme.secondary
-                                    if(item.status == "approved")
-                                        statusColor = MaterialTheme.colorScheme.primary
-                                    if (item.status == "rejected")
-                                        statusColor = MaterialTheme.colorScheme.error
-                                    if(item.status != ""){
-                                        Text("Status: ${item.status}" , color = statusColor)
-
-                                    }
-                                    else{
-                                        Text("Status: pending", color=statusColor)
-                                    }
-                                    Text("Jumlah: Rp ${item.jumlah}", fontWeight = FontWeight.Bold)
-                                    Text("Keterangan: ${item.keterangan}")
-
-                                    Spacer(Modifier.height(10.dp))
-
-                                    // DELETE BUTTON RIGHT ALIGNED
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.End
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        TextButton(
-                                            onClick = {
-                                                riwayatViewModel.delete(item)
-                                                riwayatList = riwayatList.filter { it.id != item.id }
-                                            },
-                                            colors = ButtonDefaults.textButtonColors(
-                                                contentColor = MaterialTheme.colorScheme.error
-                                            )
-                                        ) {
-                                            Text("Hapus")
-                                        }
-                                        TextButton(
-                                            onClick = {
+                                        Text(
+                                            text = SimpleDateFormat("dd MMM yyyy • HH:mm", Locale("id"))
+                                                .format(item.tanggal.toDate()),
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
+                                        )
 
-                                                riwayatViewModel.statusRiwayatGanti(item.id, "approved", "admin")
-                                            },
-                                            colors = ButtonDefaults.textButtonColors(
-                                                contentColor = MaterialTheme.colorScheme.primary
-                                            )
+                                        Surface(
+                                            color = if (isIncoming) Color(0xFFDEF8E6) else Color(0xFFFFE3E3),
+                                            shape = RoundedCornerShape(50)
                                         ) {
-                                            Text("Terima")
-                                        }
-                                        TextButton(
-                                            onClick = {
-                                                riwayatViewModel.statusRiwayatGanti(item.id, "rejected", "admin")
-                                                Log.i("DetailAnakScreen", riwayatList.toString())
-                                            },
-                                            colors = ButtonDefaults.textButtonColors(
-                                                contentColor = MaterialTheme.colorScheme.secondary
+                                            Text(
+                                                text = if (isIncoming) "Pemasukan" else "Pengeluaran",
+                                                color = if (isIncoming) Color(0xFF1AAE6F) else Color(0xFFD82020),
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                                style = MaterialTheme.typography.bodySmall
                                             )
-                                        ) {
-                                            Text("Tolak")
                                         }
+                                    }
+
+                                    Spacer(Modifier.height(10.dp))
+
+                                    // Status Badge
+                                    Row {
+                                        val statusColor = when (item.status) {
+                                            "approved" -> Color(0xFF2ECC71)
+                                            "rejected" -> Color(0xFFE74C3C)
+                                            else -> Color(0xFFB0B0B0)
+                                        }
+
+                                        Surface(
+                                            color = statusColor.copy(alpha = 0.14f),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text(
+                                                text = item.status.uppercase(),
+                                                color = statusColor,
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(Modifier.height(10.dp))
+
+                                    Text("Jumlah Dana", fontWeight = FontWeight.Medium)
+                                    Text(
+                                        "Rp ${item.jumlah}",
+                                        style = MaterialTheme.typography.titleLarge.copy(
+                                            color = if (isIncoming) Color(0xFF1AAE6F) else Color(0xFFD82020),
+                                            fontWeight = FontWeight.ExtraBold
+                                        )
+                                    )
+
+                                    Spacer(Modifier.height(6.dp))
+
+                                    if (item.keterangan.isNotEmpty()) {
+                                        Text("Keterangan", fontWeight = FontWeight.Medium)
+                                        Text(item.keterangan)
+                                    }
+
+                                    Spacer(Modifier.height(10.dp))
+                                }
+
+                                //  Buttons Fixed Bottom Layout
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 10.dp, vertical = 10.dp),
+                                    horizontalArrangement = Arrangement.End
+                                ) {
+                                    TextButton(
+                                        onClick = {
+                                            riwayatViewModel.delete(item)
+                                            riwayatList = riwayatList.filter { it.id != item.id }
+                                        },
+                                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                    ) {
+                                        Text("Hapus")
+                                    }
+
+                                    TextButton(
+                                        onClick = {
+                                            riwayatViewModel.statusRiwayatGanti(item.id, "approved", "admin")
+                                        }
+                                    ) {
+                                        Text("Terima")
+                                    }
+
+                                    TextButton(
+                                        onClick = {
+                                            riwayatViewModel.statusRiwayatGanti(item.id, "rejected", "admin")
+                                        }
+                                    ) {
+                                        Text("Tolak")
                                     }
                                 }
                             }
                         }
+
                     }
                 }
             }
         }
     }
+
+    if (showDetailSheet && selectedRiwayat != null) {
+        DetailRiwayatBottomSheet(
+            riwayat = selectedRiwayat!!,
+            onDismiss = {
+                showDetailSheet = false
+                selectedRiwayat = null
+            }
+        )
+    }
+
 
     // --------------------------------- ADD DANA DIALOG ---------------------------------
     if (showWithdrawDialog) {
