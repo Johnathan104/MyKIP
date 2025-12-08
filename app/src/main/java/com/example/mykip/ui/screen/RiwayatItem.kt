@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.mykip.data.RiwayatDana
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import kotlin.text.format
 
@@ -24,7 +25,7 @@ fun RiwayatItem(item: RiwayatDana) {
 
     // Format date (e.g., 15 January 2025, 13:22)
     val formatter = SimpleDateFormat("dd MMMM yyyy, HH:mm", Locale.getDefault())
-    val formattedDate = formatter.format(item.tanggal.toDate())
+    val formattedDate = formatter.format(Date(item.timestamp))
 
     Card(
         modifier = Modifier

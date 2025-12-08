@@ -222,7 +222,7 @@ fun DetailAnakScreen(
                                     ) {
                                         Text(
                                             text = SimpleDateFormat("dd MMM yyyy • HH:mm", Locale("id"))
-                                                .format(item.tanggal.toDate()),
+                                                .format(Date(item.timestamp)),
                                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
                                         )
 

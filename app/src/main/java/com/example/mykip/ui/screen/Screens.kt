@@ -94,8 +94,7 @@ import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
-
-
+import java.util.Date
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -842,7 +841,7 @@ fun RiwayatItemStyled(
 ) {
 
     val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
-    val tanggalFormatted = dateFormat.format(r.tanggal.toDate())
+    val tanggalFormatted = dateFormat.format(Date(r.timestamp))
 
     val jenisTransaksi = when (r.jenis) {
         "Transfer kepada Mahasiswa" -> "Pemasukan"
