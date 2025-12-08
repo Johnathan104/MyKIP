@@ -2,7 +2,6 @@ package com.example.mykip.ui.screen
 
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,17 +13,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.mykip.data.Anak
 import com.example.mykip.data.User
-import com.example.mykip.data.contohAnak
-import com.example.mykip.repository.UserRepository
-import com.example.mykip.ui.viewModel.UserViewModel
 import com.example.mykip.viewmodel.MahasiswaViewModel
 import com.example.mykip.viewmodel.RiwayatDanaViewModel
+import com.example.mykip.ui.viewModel.UserViewModel
+import kotlinx.coroutines.launch
 
 data class AnakUI(
     val nim: String,
@@ -34,6 +30,7 @@ data class AnakUI(
     val danaTerpakai: Int,
     val photoResId: Int
 )
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DaftarAnakScreen(
@@ -44,12 +41,26 @@ fun DaftarAnakScreen(
 ) {
     var query by remember { mutableStateOf("") }
 
+    // Lists
     var anakList by remember { mutableStateOf<List<AnakUI>>(emptyList()) }
     var mahasiswaList by remember { mutableStateOf(emptyList<com.example.mykip.data.Mahasiswa>()) }
     var userList by remember { mutableStateOf(emptyList<User>()) }
-
     val riwayatList by riwayatViewModel.riwayatList.collectAsState()
 
+    // Dialog states
+    var showDialog by remember { mutableStateOf(false) }
+    var selectedMahasiswa by remember { mutableStateOf<com.example.mykip.data.Mahasiswa?>(null) }
+    var waliEmail by remember { mutableStateOf("") }
+    var originalWaliEmail by remember { mutableStateOf("") }
+
+    // ViewModel UI state
+    val uiState = mahasiswaViewModel.uiState
+
+    // Snackbars
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutine = rememberCoroutineScope()
+
+    // Load initial data
     LaunchedEffect(Unit) {
         userViewModel.getAllUsers { userList = it }
         mahasiswaViewModel.getAll { mhsList ->
@@ -58,39 +69,47 @@ fun DaftarAnakScreen(
         }
     }
 
+    // Map Mahasiswa to AnakUI
     LaunchedEffect(mahasiswaList, userList, riwayatList) {
         if (mahasiswaList.isNotEmpty() && userList.isNotEmpty()) {
             anakList = mahasiswaList.mapNotNull { mhs ->
                 val tiedUser = userList.find { it.nim == mhs.nim && it.role == "mahasiswa" }
                 if (tiedUser != null) {
                     val riwayatMhs = riwayatList.filter { it.nim == mhs.nim }
-
-                    val danaMasuk = riwayatMhs
-                        .filter { it.jenis == "Transfer kepada Mahasiswa" }
-                        .sumOf { it.jumlah }
-
                     val danaTerpakai = riwayatMhs
                         .filter { it.jenis == "Transfer oleh Mahasiswa" }
                         .sumOf { it.jumlah }
-
-                    val danaTersisa = tiedUser.balance
 
                     AnakUI(
                         nim = mhs.nim,
                         nama = mhs.nama,
                         jurusan = mhs.jurusan,
-                        danaTersisa = danaTersisa,
+                        danaTersisa = tiedUser.balance,
                         danaTerpakai = danaTerpakai,
                         photoResId = mhs.photoResId
                     )
-
                 } else null
             }
         }
     }
 
+    // React to update success / error
+    LaunchedEffect(uiState.isSuccess, uiState.error) {
+        if (uiState.isSuccess) {
+            coroutine.launch {
+                snackbarHostState.showSnackbar("Email wali berhasil diperbarui")
+            }
+            showDialog = false
+        }
 
+        uiState.error?.let { err ->
+            coroutine.launch {
+                snackbarHostState.showSnackbar("Error: $err")
+            }
+        }
+    }
 
+    // Search Filter
     val filteredList = anakList.filter {
         it.nama.contains(query, true) ||
                 it.jurusan.contains(query, true) ||
@@ -98,6 +117,7 @@ fun DaftarAnakScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -118,7 +138,6 @@ fun DaftarAnakScreen(
                 .fillMaxSize()
         ) {
 
-            // Search Bar modern
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
@@ -143,19 +162,80 @@ fun DaftarAnakScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(filteredList) { anak ->
-                    CardMahasiswaUI(anak) {
-                        navController.navigate("detailAnak/${anak.nim}")
-                    }
+
+                    CardMahasiswaUI(
+                        anak = anak,
+                        onClick = {
+                            navController.navigate("detailAnak/${anak.nim}")
+                        },
+                        onKasihEmail = {
+                            val mhs = mahasiswaList.find { it.nim == anak.nim }
+                            selectedMahasiswa = mhs
+                            waliEmail = mhs?.emailWali ?: ""
+                            originalWaliEmail = waliEmail
+                            showDialog = true
+                        }
+                    )
                 }
             }
         }
+    }
+
+    // ===========================================================
+    //               UPDATE EMAIL WALI DIALOG
+    // ===========================================================
+    if (showDialog && selectedMahasiswa != null) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!uiState.isLoading) showDialog = false
+            },
+            title = { Text("Email Wali untuk ${selectedMahasiswa!!.nama}") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = waliEmail,
+                        onValueChange = { waliEmail = it },
+                        label = { Text("Email Wali") },
+                        enabled = !uiState.isLoading,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (uiState.isLoading) {
+                        Spacer(Modifier.height(12.dp))
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val updated = selectedMahasiswa!!.copy(emailWali = waliEmail)
+                        mahasiswaViewModel.update(updated)
+                    },
+                    enabled = waliEmail != originalWaliEmail && !uiState.isLoading
+                ) {
+                    Text("Update")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showDialog = false },
+                    enabled = !uiState.isLoading
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
 
 @Composable
-fun CardMahasiswaUI(anak: AnakUI, onClick: () -> Unit) {
-
+fun CardMahasiswaUI(
+    anak: AnakUI,
+    onClick: () -> Unit,
+    onKasihEmail: () -> Unit
+) {
     val danaTotal = anak.danaTersisa + anak.danaTerpakai
     val percentageUsed = if (danaTotal == 0) 0f else anak.danaTerpakai.toFloat() / danaTotal
 
@@ -170,7 +250,6 @@ fun CardMahasiswaUI(anak: AnakUI, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
 
-        // Header Highlight
         Box(
             Modifier
                 .fillMaxWidth()
@@ -188,29 +267,12 @@ fun CardMahasiswaUI(anak: AnakUI, onClick: () -> Unit) {
 
         Column(Modifier.padding(16.dp)) {
 
-            Text(
-                anak.nim,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = Color.Gray
-                )
-            )
-
-            Text(
-                anak.jurusan,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = Color.Gray
-                )
-            )
+            Text(anak.nim, color = Color.Gray)
+            Text(anak.jurusan, color = Color.Gray)
 
             Spacer(Modifier.height(18.dp))
 
-            Text(
-                "Dana Tersisa",
-                style = MaterialTheme.typography.labelSmall.copy(
-                    color = Color(0xFF27AE60)
-                )
-            )
-
+            Text("Dana Tersisa", color = Color(0xFF27AE60))
             Text(
                 "Rp ${"%,.0f".format(anak.danaTersisa.toFloat())}",
                 style = MaterialTheme.typography.titleLarge.copy(
@@ -220,18 +282,11 @@ fun CardMahasiswaUI(anak: AnakUI, onClick: () -> Unit) {
             )
 
             Spacer(Modifier.height(8.dp))
-
-            Divider(thickness = 1.dp, color = Color(0xFFE0E0E0))
+            Divider()
 
             Spacer(Modifier.height(10.dp))
 
-            Text(
-                "Dana Terpakai",
-                style = MaterialTheme.typography.labelSmall.copy(
-                    color = Color(0xFFE74C3C)
-                )
-            )
-
+            Text("Dana Terpakai", color = Color(0xFFE74C3C))
             Text(
                 "Rp ${"%,.0f".format(anak.danaTerpakai.toFloat())}",
                 style = MaterialTheme.typography.titleMedium.copy(
@@ -256,48 +311,18 @@ fun CardMahasiswaUI(anak: AnakUI, onClick: () -> Unit) {
 
             Text(
                 "${"%.1f".format(percentageUsed * 100)}% dana digunakan",
-                style = MaterialTheme.typography.bodySmall.copy(color = Color.DarkGray)
+                color = Color.DarkGray
             )
+
+            Spacer(Modifier.height(16.dp))
+
+            Button(
+                onClick = { onKasihEmail() },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Kasih Email Wali")
+            }
         }
     }
 }
-
-
-
-@Composable
-fun DanaBadge(label: String, value: Int, isPositive: Boolean) {
-    val animatedValue by animateIntAsState(
-        targetValue = value,
-        animationSpec = tween(durationMillis = 600)
-    )
-
-    val bgColor = if (isPositive) Color(0xFFD1F2EB) else Color(0xFFFADBD8)
-    val textColor = if (isPositive) Color(0xFF16A085) else Color(0xFFC0392B)
-
-    Surface(
-        color = bgColor,
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-        ) {
-            Text(
-                label,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    color = textColor
-                )
-            )
-
-            Text(
-                "Rp ${"%,.0f".format(animatedValue.toFloat())}",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = textColor
-                )
-            )
-        }
-    }
-}
-
-
-

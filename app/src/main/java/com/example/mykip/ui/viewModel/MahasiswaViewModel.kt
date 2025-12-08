@@ -9,12 +9,50 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import com.example.mykip.data.User
+import com.example.mykip.ui.viewModel.UiState
 import com.google.firebase.firestore.FirebaseFirestore
+
+
 
 class MahasiswaViewModel(
     private val repository: MahasiswaRepository
 ) : ViewModel() {
 
+    var uiState by mutableStateOf(UiState())
+        private set
+    var mahasiswa:Mahasiswa? = null
+    // 🔄 Reset uiState
+    private fun resetUiState() {
+        uiState = UiState()
+    }
+    fun insert(mahasiswa: Mahasiswa) {
+        viewModelScope.launch {
+            repository.insert(mahasiswa)
+        }
+    }
+    fun delete(mahasiswa: Mahasiswa) {
+        viewModelScope.launch {
+            repository.delete(mahasiswa)
+        }
+    }
+    fun getAll(onResult: (List<Mahasiswa>) -> Unit) {
+        viewModelScope.launch {
+            onResult(repository.getAll())
+        }
+    }
+
+    // 📌 Fetch mahasiswa by NIM
+    fun getByNim(nim: String, onResult: (Mahasiswa?) -> Unit) {
+        viewModelScope.launch {
+            onResult(repository.getByNim(nim))
+        }
+    }
+    fun getMahasiswaByNim(nim: String, onResult: (Mahasiswa?) -> Unit) {
+        getByNim(nim) { mahasiswa ->
+            this.mahasiswa = mahasiswa
+            onResult(mahasiswa)
+        }
+    }
     fun transferMahasiswa(
         nim: String,
         jumlah: Int,
@@ -45,45 +83,25 @@ class MahasiswaViewModel(
                 )
             }
     }
-
-    fun getMahasiswaByNim(nim: String, onResult: (Mahasiswa?) -> Unit) {
-        getByNim(nim) { mahasiswa ->
-            this.mahasiswa = mahasiswa
-            onResult(mahasiswa)
-        }
-    }
-
-
-    var mahasiswa: Mahasiswa? by mutableStateOf(null)
-        private set
-
-    fun insert(mahasiswa: Mahasiswa) {
-        viewModelScope.launch {
-            repository.insert(mahasiswa)
-        }
-    }
-
-    fun getAll(onResult: (List<Mahasiswa>) -> Unit) {
-        viewModelScope.launch {
-            onResult(repository.getAll())
-        }
-    }
-
-    fun getByNim(nim: String, onResult: (Mahasiswa?) -> Unit) {
-        viewModelScope.launch {
-            onResult(repository.getByNim(nim))
-        }
-    }
-
+    // 📌 Update mahasiswa (with UiState)
     fun update(mahasiswa: Mahasiswa) {
-        viewModelScope.launch {
-            repository.update(mahasiswa)
-        }
-    }
+        uiState = UiState(isLoading = true)
 
-    fun delete(mahasiswa: Mahasiswa) {
         viewModelScope.launch {
-            repository.delete(mahasiswa)
+            try {
+                repository.update(mahasiswa)
+                uiState = UiState(
+                    isLoading = false,
+                    isSuccess = true,
+                    message = "Email telah diperbarui."
+                )
+            } catch (e: Exception) {
+                uiState = UiState(
+                    isLoading = false,
+                    isSuccess = false,
+                    error = e.message ?: "Terjadi kesalahan saat update."
+                )
+            }
         }
     }
 }

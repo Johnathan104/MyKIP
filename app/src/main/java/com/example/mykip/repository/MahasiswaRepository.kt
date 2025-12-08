@@ -24,8 +24,26 @@ class MahasiswaRepository(
     }
 
     suspend fun update(mahasiswa: Mahasiswa) {
+        // 1. Check duplicate emailWali
+//        if (mahasiswa.emailWali!!.isNotBlank()) {
+//            val existing = collection
+//                .whereEqualTo("emailWali", mahasiswa.emailWali)
+//                .get()
+//                .await()
+//
+//            val duplicateExists = existing.documents.any { doc ->
+//                doc.id != mahasiswa.nim   // different mahasiswa, same email
+//            }
+//
+//            if (duplicateExists) {
+//                throw IllegalStateException("Email wali sudah digunakan mahasiswa lain.")
+//            }
+//        }
+
+        // 2. If no duplicate → update normally
         collection.document(mahasiswa.nim).set(mahasiswa).await()
     }
+
 
     suspend fun delete(mahasiswa: Mahasiswa) {
         collection.document(mahasiswa.nim).delete().await()
