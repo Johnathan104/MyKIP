@@ -1,0 +1,55 @@
+
+
+// Navigation.kt
+package org.whynot.kipku.ui.screen
+
+
+import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import org.whynot.kipku.repository.OrangTuaRepository
+import org.whynot.kipku.ui.viewModel.UserViewModel
+import org.whynot.kipku.ui.viewModel.MahasiswaViewModel
+import org.whynot.kipku.ui.viewModel.OrangTuaViewModel
+import org.whynot.kipku.ui.viewModel.OrangTuaViewModelFactory
+
+
+@Composable
+fun AppNavigation(
+    navController: NavHostController,
+    viewModel: UserViewModel,
+    mahasiswaViewModel: MahasiswaViewModel
+) {
+    // INIT DATABASE
+    val context = navController.context
+
+    // INIT REPOSITORY
+    val orangTuaRepository = OrangTuaRepository()
+
+    // INIT VIEWMODEL
+    val orangTuaViewModel: OrangTuaViewModel = viewModel(
+        factory = OrangTuaViewModelFactory(orangTuaRepository)
+    )
+
+    NavHost(navController = navController, startDestination = "register") {
+
+        composable("register") {
+            RegisterScreen(
+                userViewModel = viewModel,
+                mahasiswaViewModel = mahasiswaViewModel,
+                orangTuaViewModel = orangTuaViewModel,  // ← WAJIB
+                onNavigateToLogin = { navController.navigate("login") }
+            )
+        }
+
+        composable("login") {
+            LoginScreen(
+                viewModel,
+                onLoginSuccess = {},
+                onNavigateToRegister = { navController.navigate("register") }
+            )
+        }
+    }
+}

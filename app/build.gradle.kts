@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.mykip"
+    namespace = "org.whynot.kipku"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.mykip"
+        applicationId = "org.whynot.kipku"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

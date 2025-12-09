@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:221279490676:android:3dbdd83392f500f611f721",
         "android_client_info": {
-          "package_name": "com.example.mykip"
+          "package_name": "org.whynot.kipku"
         }
       },
       "oauth_client": [],
