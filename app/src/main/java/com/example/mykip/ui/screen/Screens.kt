@@ -332,61 +332,101 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(30.dp))
 
             } else {
-                // Mahasiswa/Admin → tampilkan single card seperti sebelumnya
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(8.dp)
-                ) {
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                brush = Brush.horizontalGradient(
-                                    listOf(
-                                        Color(0xFF304FFE),
-                                        Color(0xFF00BCD4),
-                                        Color(0xFF4CAF50)
+                if (displayedRole.lowercase() == "admin") {
+                    // 👉 CARD ADMIN (simple)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    brush = Brush.horizontalGradient(
+                                        listOf(
+                                            Color(0xFF304FFE),
+                                            Color(0xFF00BCD4),
+                                            Color(0xFF4CAF50)
+                                        )
                                     )
                                 )
-                            )
-                            .padding(20.dp)
+                                .padding(20.dp)
+                        ) {
+                            Column {
+                                Text(
+                                    text = displayedNama,
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
+
+                                Text(
+                                    text = displayedRole,
+                                    style = MaterialTheme.typography.bodyMedium.copy(color = Color.White)
+                                )
+                            }
+                        }
+                    }
+
+                } else {
+                    // 👉 CARD MAHASISWA (original + saldo)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(8.dp)
                     ) {
-                        Column {
-                            Text(
-                                text = displayedNama,
-                                style = MaterialTheme.typography.titleLarge.copy(
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    brush = Brush.horizontalGradient(
+                                        listOf(
+                                            Color(0xFF304FFE),
+                                            Color(0xFF00BCD4),
+                                            Color(0xFF4CAF50)
+                                        )
+                                    )
                                 )
-                            )
-
-                            Text(
-                                text = displayedRole,
-                                style = MaterialTheme.typography.bodyMedium.copy(color = Color.White)
-                            )
-
-                            Spacer(modifier = Modifier.height(18.dp))
-
-                            Text("Total Saldo", color = Color.White)
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            Text(
-                                text = totalSaldo,
-                                style = MaterialTheme.typography.headlineSmall.copy(
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold
+                                .padding(20.dp)
+                        ) {
+                            Column {
+                                Text(
+                                    text = displayedNama,
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 )
-                            )
+
+                                Text(
+                                    text = displayedRole,
+                                    style = MaterialTheme.typography.bodyMedium.copy(color = Color.White)
+                                )
+
+                                Spacer(modifier = Modifier.height(18.dp))
+
+                                Text("Total Saldo", color = Color.White)
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Text(
+                                    text = totalSaldo,
+                                    style = MaterialTheme.typography.headlineSmall.copy(
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
+                            }
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(30.dp))
             }
+
         }
 
 
@@ -611,13 +651,17 @@ fun AdminSummaryDashboard(
     riwayatList: List<RiwayatDana>,
     userList: List<User>
 ) {
-    val totalMahasiswa = mahasiswaList.size
+    val totalMahasiswa = userList.count { it.role == "mahasiswa" }
     val totalTransaksi = riwayatList.size
 
-    val totalDanaMasuk = riwayatList.filter { it.goingIn }.sumOf { it.jumlah }
-    val totalDanaKeluar = riwayatList.filter { !it.goingIn }.sumOf { it.jumlah }
+    val totalTransferKepadaMahasiswa = riwayatList
+        .filter { it.jenis == "Transfer kepada Mahasiswa" && it.status == "approved" }
+        .sumOf { it.jumlah }
 
-    // saldo dari tabel user
+    val totalTransferOlehMahasiswa = riwayatList
+        .filter { it.jenis == "Transfer oleh Mahasiswa" && it.status == "approved" }
+        .sumOf { it.jumlah }
+
     val totalSaldoMahasiswa = userList
         .filter { it.role == "mahasiswa" }
         .sumOf { it.balance }
@@ -626,34 +670,69 @@ fun AdminSummaryDashboard(
         totalSaldoMahasiswa / totalMahasiswa
     } else 0
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 20.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(6.dp)
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+    // 🔥 CEK DATA PENDING
+    val pendingList = riwayatList.filter { it.status == "pending" }
+    val adaPending = pendingList.isNotEmpty()
 
-            Text(
-                "Dashboard Ringkasan Admin",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold
+    Column {
+
+        // ❗️ tampilkan notifikasi jika ada pending
+        if (adaPending) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE5E5)),
+                elevation = CardDefaults.cardElevation(8.dp)
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        "⚠️ Ada transaksi pending!",
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFD00000)
+                    )
+
+                    Spacer(Modifier.height(6.dp))
+
+                    Text(
+                        "Terdapat ${pendingList.size} transaksi yang belum diverifikasi.",
+                        color = Color(0xFFC00000)
+                    )
+                }
+            }
+        }
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 20.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(6.dp)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+
+                Text(
+                    "Dashboard Ringkasan Admin",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    )
                 )
-            )
 
-            Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(16.dp))
 
-            SummaryRow("Total Mahasiswa", totalMahasiswa.toString())
-            SummaryRow("Total Transaksi", totalTransaksi.toString())
-            SummaryRow("Total Dana Masuk", "Rp. $totalDanaMasuk")
-            SummaryRow("Total Dana Keluar", "Rp. $totalDanaKeluar")
-            SummaryRow("Total Saldo Mahasiswa", "Rp. $totalSaldoMahasiswa")
-            SummaryRow("Rata-rata Saldo", "Rp. $averageSaldo")
+                SummaryRow("Total Mahasiswa", totalMahasiswa.toString())
+                SummaryRow("Total Transaksi", totalTransaksi.toString())
+                SummaryRow("Total Dana Masuk", "Rp. $totalTransferKepadaMahasiswa")
+                SummaryRow("Total Dana Keluar", "Rp. $totalTransferOlehMahasiswa")
+                SummaryRow("Total Saldo Mahasiswa", "Rp. $totalSaldoMahasiswa")
+                SummaryRow("Rata-rata Saldo", "Rp. $averageSaldo")
+            }
         }
     }
 }
+
 
 
 @Composable

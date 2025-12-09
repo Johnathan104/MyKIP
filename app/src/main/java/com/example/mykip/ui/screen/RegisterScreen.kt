@@ -87,10 +87,10 @@ fun RegisterScreen(
         } else {
             // orang tua
             nama.isNotEmpty() &&
-                    nim.isNotEmpty() &&
-                    email.isNotEmpty() &&
-                    password.isNotEmpty() &&
-                    isAgree
+            email.isNotEmpty() &&
+            password.isNotEmpty() &&
+            isAgree
+
         }
 
     Box(
@@ -213,7 +213,6 @@ fun RegisterScreen(
                             }
 
                             if (tab == 1) {
-                                RoundedInput("NIM Anak", nim) { nim = it }
                                 RoundedInput("Nama Orang Tua", nama) { nama = it }
                                 Spacer(Modifier.height(10.dp))
                             }
