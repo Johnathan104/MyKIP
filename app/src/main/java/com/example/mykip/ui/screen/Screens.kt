@@ -1199,11 +1199,8 @@ fun ProfileDetailScreen(
                         editableNim = user.nim
                         if(mhs.alamat != null)
                         editableAlamat = mhs.alamat
-                        if (mhs.emailWali != null)
-                        editableEmailWali = mhs.emailWali
-
                         // convert timestamp → yyyy-MM-dd
-                        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                         val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                         if (mhs.tanggalLahir != null)
                         editableTanggalLahir = sdf.format(mhs.tanggalLahir?.toDate())
                     }
@@ -1266,7 +1263,6 @@ fun ProfileDetailScreen(
                         val updatedMhs = currentMahasiswa!!.copy(
                             nama = editableNama,
                             alamat = editableAlamat,
-                            emailWali = editableEmailWali,
                             tanggalLahir = timestampTanggal
                         )
 
@@ -1349,10 +1345,7 @@ fun ProfileDetailScreen(
                 EditableField(editableAlamat, isEditing) { editableAlamat = it }
                 Spacer(Modifier.height(14.dp))
 
-                // ---------- Email Wali ----------
-                Text("Email Wali")
-                EditableField(editableEmailWali, isEditing) { editableEmailWali = it }
-                Spacer(Modifier.height(14.dp))
+
 
                 // ---------- Tanggal Lahir ----------
                 Text("Tanggal Lahir (yyyy-MM-dd)")
