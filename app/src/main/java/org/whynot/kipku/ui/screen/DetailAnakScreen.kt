@@ -27,6 +27,7 @@ import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.collections.sorted
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +46,9 @@ fun DetailAnakScreen(
     var riwayatList by remember { mutableStateOf<List<RiwayatDana>>(emptyList()) }
     var showWithdrawDialog by remember { mutableStateOf(false) }
     var userList by remember { mutableStateOf(emptyList<User>()) }
+// ===== FILTER SEMESTER =====
+    var selectedSemester by remember { mutableStateOf<Int?>(null) } // null = semua
+    var expandedSemester by remember { mutableStateOf(false) }
 
     LaunchedEffect(anakNim) {
         userViewModel.getAllUsers { userList = it }
@@ -54,6 +58,18 @@ fun DetailAnakScreen(
 
     var selectedRiwayat by remember { mutableStateOf<RiwayatDana?>(null) }
     var showDetailSheet by remember { mutableStateOf(false) }
+// ===== DATA SEMESTER =====
+    val semesterList = remember(riwayatList) {
+        riwayatList
+            .mapNotNull { it.semester } // 🔥 buang null
+            .distinct()
+            .sorted()
+    }
+
+
+    val filteredRiwayat = riwayatList
+        .filter { selectedSemester == null || it.semester == selectedSemester }
+        .sortedByDescending { it.timestamp }
 
     Scaffold(
         topBar = {
@@ -201,6 +217,62 @@ fun DetailAnakScreen(
 
                 }
             }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+
+                        Text(
+                            "Filter Riwayat Semester",
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(Modifier.height(6.dp))
+
+                        ExposedDropdownMenuBox(
+                            expanded = expandedSemester,
+                            onExpandedChange = { expandedSemester = !expandedSemester }
+                        ) {
+                            TextField(
+                                readOnly = true,
+                                value = selectedSemester?.let { "Semester $it" } ?: "Semua Semester",
+                                onValueChange = {},
+                                modifier = Modifier
+                                    .menuAnchor()
+                                    .fillMaxWidth(),
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expandedSemester)
+                                }
+                            )
+
+                            ExposedDropdownMenu(
+                                expanded = expandedSemester,
+                                onDismissRequest = { expandedSemester = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Semua Semester") },
+                                    onClick = {
+                                        selectedSemester = null
+                                        expandedSemester = false
+                                    }
+                                )
+
+                                semesterList.forEach { semester ->
+                                    DropdownMenuItem(
+                                        text = { Text("Semester $semester") },
+                                        onClick = {
+                                            selectedSemester = semester
+                                            expandedSemester = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             if (riwayatList.isEmpty()) {
                 item {
@@ -212,7 +284,7 @@ fun DetailAnakScreen(
                     )
                 }
             } else {
-                items(riwayatList.sortedByDescending { it.timestamp }) { item ->
+                items(filteredRiwayat) { item ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()

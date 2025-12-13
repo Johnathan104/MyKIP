@@ -61,6 +61,8 @@ fun TransferScreen(
 
     var selectedSemester by remember { mutableStateOf<Int?>(null) }
     var semesterExpanded by remember { mutableStateOf(false) }
+    var showImageSourceSheet by remember { mutableStateOf(false) }
+
 
     val semesterOptions = listOf(
         "1", "2", "3",
@@ -96,6 +98,16 @@ fun TransferScreen(
             }
         }
     )
+
+    val takePhotoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        bitmap?.let {
+            selectedImage = ImageConverter.bitmapToByteArray(it)
+            base64Image = ImageConverter.bitmapToBase64(it)
+        }
+    }
+
     LaunchedEffect(Unit){
         mahasiswaViewModel.getByNim(user.nim){
             currentMhs = it
@@ -235,7 +247,7 @@ fun TransferScreen(
                         onExpandedChange = { semesterExpanded = !semesterExpanded }
                     ) {
                         OutlinedTextField(
-                            value = selectedSemester.toString(),
+                            value = selectedSemester?.let { "Semester $it" } ?: "Pilih Semester",
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Semester") },
@@ -287,7 +299,7 @@ fun TransferScreen(
                             color = Color(0xFFBDBDBD),
                             shape = RoundedCornerShape(16.dp)
                         )
-                        .clickable { pickImageLauncher.launch("image/*") }
+                        .clickable { showImageSourceSheet = true }
                 ) {
                     if (selectedImage == null) {
                         // Placeholder when no image is uploaded
@@ -386,6 +398,64 @@ fun TransferScreen(
                 Spacer(Modifier.height(8.dp))
             }
         }
+        if (showImageSourceSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showImageSourceSheet = false },
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp)
+                ) {
+
+                    Text(
+                        "Pilih Sumber Gambar",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // 📷 Kamera
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showImageSourceSheet = false
+                                takePhotoLauncher.launch(null)
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Upload, contentDescription = null)
+                        Spacer(Modifier.width(12.dp))
+                        Text("Ambil dari Kamera")
+                    }
+
+                    Divider()
+
+                    // 🖼 Galeri
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showImageSourceSheet = false
+                                pickImageLauncher.launch("image/*")
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                        Spacer(Modifier.width(12.dp))
+                        Text("Pilih dari Galeri")
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+                }
+            }
+        }
+
     }
 }
 

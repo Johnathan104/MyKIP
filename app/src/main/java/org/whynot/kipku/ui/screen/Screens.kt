@@ -76,6 +76,7 @@ import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.Date
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -102,6 +103,11 @@ fun HomeScreen(
     var riwayatList by remember { mutableStateOf(emptyList<RiwayatDana>()) }
 
     var sortNewestFirst by remember { mutableStateOf(true) }
+
+    // ===== FILTER SEMESTER =====
+    var selectedSemester by remember { mutableStateOf<Int?>(null) } // null = semua
+    var expandedSemester by remember { mutableStateOf(false) }
+
 
 // APPLY SORTING DI SINI!
     val sortedRiwayat = if (sortNewestFirst)
@@ -160,6 +166,16 @@ fun HomeScreen(
             riwayatList = emptyList()
         }
     }
+// ===== SEMESTER DATA =====
+    val semesterList = remember(riwayatList) {
+        riwayatList
+            .mapNotNull { it.semester } // penting: buang null
+            .distinct()
+            .sorted()
+    }
+
+    val filteredRiwayat = riwayatList
+        .filter { selectedSemester == null || it.semester == selectedSemester }
 
 
     // ===== DISPLAY VALUES =====
@@ -428,13 +444,93 @@ fun HomeScreen(
         // GRID MENU
         // ============================
         item {
+            Spacer(modifier = Modifier.height(12.dp))
             FeatureGrid(navController, userRole = user!!.role)
             Spacer(modifier = Modifier.height(12.dp))
         }
 
         // ============================
-        // TITLE RIWAYAT
+        // FILTER SEMESTER
         // ============================
+        if (isMahasiswa || isOrtu) {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    ),
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(horizontal = 14.dp, vertical = 12.dp)
+                    ) {
+
+                        Text(
+                            text = "Filter",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.Gray
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        ExposedDropdownMenuBox(
+                            expanded = expandedSemester,
+                            onExpandedChange = { expandedSemester = !expandedSemester }
+                        ) {
+                            OutlinedTextField(
+                                readOnly = true,
+                                value = selectedSemester?.let { "Semester $it" } ?: "Semua Semester",
+                                onValueChange = {},
+                                modifier = Modifier
+                                    .menuAnchor()
+                                    .fillMaxWidth(),
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expandedSemester)
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
+                                    unfocusedBorderColor = Color(0xFFE0E0E0),
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary
+                                )
+                            )
+
+                            ExposedDropdownMenu(
+                                expanded = expandedSemester,
+                                onDismissRequest = { expandedSemester = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Semua Semester") },
+                                    onClick = {
+                                        selectedSemester = null
+                                        expandedSemester = false
+                                    }
+                                )
+
+                                semesterList.forEach { semester ->
+                                    DropdownMenuItem(
+                                        text = { Text("Semester $semester") },
+                                        onClick = {
+                                            selectedSemester = semester
+                                            expandedSemester = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(12.dp)) }
+        }
+
+
+
         item {
             Row(
                 modifier = Modifier
@@ -468,15 +564,20 @@ fun HomeScreen(
         // ============================
         items(
             items = if (sortNewestFirst)
-                riwayatList.sortedByDescending { it.timestamp } // terbaru
+                riwayatList
+                    .filter { selectedSemester == null || it.semester == selectedSemester }
+                    .sortedByDescending { it.timestamp } // terbaru
             else
-                riwayatList.sortedBy { it.timestamp }            // terlama
+                riwayatList
+                    .filter { selectedSemester == null || it.semester == selectedSemester }
+                    .sortedBy { it.timestamp }            // terlama
         ) { r: RiwayatDana ->
             RiwayatItemStyled(r) {
                 selectedRiwayat = r
                 showDetailBottomSheet = true
             }
         }
+
 
 
         item {
@@ -765,7 +866,7 @@ fun FeatureGrid(
             .heightIn(max = 2000.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
         horizontalArrangement = Arrangement.spacedBy(18.dp),
-        contentPadding = PaddingValues(bottom = 80.dp)
+        contentPadding = PaddingValues(bottom = 12.dp)
     ) {
         items(features) { item ->
 
@@ -1211,6 +1312,8 @@ fun ProfileDetailScreen(
             editableNim = user?.nim ?: ""
         }
     }
+
+
 
     val displayedEmail = user?.email ?: "-"
     val displayedRole = when {
