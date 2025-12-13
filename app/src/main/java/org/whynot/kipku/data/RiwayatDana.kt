@@ -11,6 +11,7 @@ data class RiwayatDana(
     val timestamp: Long = 0L, // ← PENTING
     val goingIn: Boolean=false,
     val jumlah: Int=0,
+    val semester: Int?= null,
     val keterangan: String="",
     val bukti_transfer: String? = null // <-- SESUAI FIRESTORE
 

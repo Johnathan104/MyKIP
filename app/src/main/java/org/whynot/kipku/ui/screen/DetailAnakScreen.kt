@@ -40,6 +40,7 @@ fun DetailAnakScreen(
 
     fun getTodayDate(): Timestamp = Timestamp(Date())
 
+    val uiState = userViewModel.uiState
     var mahasiswa by remember { mutableStateOf<Mahasiswa?>(null) }
     var riwayatList by remember { mutableStateOf<List<RiwayatDana>>(emptyList()) }
     var showWithdrawDialog by remember { mutableStateOf(false) }
@@ -173,7 +174,15 @@ fun DetailAnakScreen(
                     }
 
                     Spacer(Modifier.height(12.dp))
+                    if(uiState.message.isNotBlank()){
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            contentAlignment = Alignment.Center,
 
+                        ){
+                            Text(uiState.message, color = MaterialTheme.colorScheme.error )
+                        }
+                    }
                     Button(
                         onClick = { showWithdrawDialog = true },
                         modifier = Modifier
@@ -339,12 +348,13 @@ fun DetailAnakScreen(
     if (showWithdrawDialog) {
         DepositDialog(
             onDismiss = { showWithdrawDialog = false },
-            onSubmit = { jumlah, keterangan ->
+            onSubmit = { jumlah, keterangan, semester ->
                 userViewModel.penyetoran(
                     nim = anakNim,
                     jumlah = jumlah,
                     keterangan = keterangan,
-                    riwayatViewModel = riwayatViewModel
+                    riwayatViewModel = riwayatViewModel,
+                    semester = semester
                 )
                 showWithdrawDialog = false
             }

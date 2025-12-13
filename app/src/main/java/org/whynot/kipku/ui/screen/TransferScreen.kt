@@ -26,18 +26,24 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material3.ExposedDropdownMenuDefaults.TrailingIcon
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import org.whynot.kipku.utils.ImageConverter
 import org.whynot.kipku.R
+import org.whynot.kipku.data.Mahasiswa
 
 import org.whynot.kipku.ui.viewModel.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransferScreen(
     navController: NavController,
@@ -51,7 +57,16 @@ fun TransferScreen(
 
     val isOrtu = user.role == "orangTua"
     val isMahasiswa = user.role == "mahasiswa"
+    var currentMhs by remember { mutableStateOf<Mahasiswa?>(null) }
 
+    var selectedSemester by remember { mutableStateOf<Int?>(null) }
+    var semesterExpanded by remember { mutableStateOf(false) }
+
+    val semesterOptions = listOf(
+        "1", "2", "3",
+        "4", "5", "6",
+        "7", "8"
+    )
     var jumlah by remember { mutableStateOf("") }
     var keterangan by remember { mutableStateOf("") }
 
@@ -81,7 +96,16 @@ fun TransferScreen(
             }
         }
     )
-
+    LaunchedEffect(Unit){
+        mahasiswaViewModel.getByNim(user.nim){
+            currentMhs = it
+        }
+        if(isMahasiswa){
+            mahasiswaViewModel.getByNim(user.nim){
+                currentMhs = it
+            }
+        }
+    }
 
     LaunchedEffect(triggerTransfer) {
         if (triggerTransfer) {
@@ -132,7 +156,6 @@ fun TransferScreen(
             )
         }
 
-        // CARD CONTAINER
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -142,12 +165,16 @@ fun TransferScreen(
             colors = CardDefaults.cardColors(containerColor = Color.White),
             shape = RoundedCornerShape(20.dp)
         ) {
+            // ScrollState to handle scrolling
+            val scrollState = rememberScrollState()
+
+            // Wrap the Column inside the Modifier.verticalScroll
             Column(
                 modifier = Modifier
                     .padding(20.dp)
+                    .verticalScroll(scrollState) // Enable scrolling
             ) {
-
-                // INPUT JUMLAH
+                // Input for Amount (Jumlah)
                 Text(
                     "Jumlah Transfer",
                     fontWeight = FontWeight.SemiBold,
@@ -171,7 +198,7 @@ fun TransferScreen(
 
                 Spacer(Modifier.height(20.dp))
 
-                // INPUT KETERANGAN
+                // Input for Description (Keterangan)
                 Text(
                     "Keterangan",
                     fontWeight = FontWeight.SemiBold,
@@ -193,8 +220,53 @@ fun TransferScreen(
                     shape = RoundedCornerShape(14.dp)
                 )
 
-                // ⭐ Input bukti transfer (gambar)
-                // ⭐ Gambar Bukti Transfer
+                if (currentMhs != null) {
+                    Text(
+                        "Semester",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp
+                    )
+
+                    Spacer(Modifier.height(4.dp))
+
+                    // Semester Dropdown
+                    ExposedDropdownMenuBox(
+                        expanded = semesterExpanded,
+                        onExpandedChange = { semesterExpanded = !semesterExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedSemester.toString(),
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Semester") },
+                            trailingIcon = {
+                                TrailingIcon(expanded = semesterExpanded)
+                            },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = semesterExpanded,
+                            onDismissRequest = { semesterExpanded = false }
+                        ) {
+                            (1..currentMhs!!.semester).forEach { semester ->
+                                DropdownMenuItem(
+                                    text = { Text(semester.toString()) },
+                                    onClick = {
+                                        selectedSemester = semester
+                                        semesterExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(20.dp))
+                }
+
+                // Image Upload (Bukti Transfer)
                 Text(
                     "Bukti Transfer",
                     fontWeight = FontWeight.SemiBold,
@@ -203,9 +275,7 @@ fun TransferScreen(
 
                 Spacer(Modifier.height(6.dp))
 
-// ========================
-// CARD UPLOAD GAMBAR
-// ========================
+                // Card Upload Gambar (Image Upload Box)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -219,9 +289,8 @@ fun TransferScreen(
                         )
                         .clickable { pickImageLauncher.launch("image/*") }
                 ) {
-
                     if (selectedImage == null) {
-                        // Jika belum upload, tampilkan placeholder
+                        // Placeholder when no image is uploaded
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -242,9 +311,8 @@ fun TransferScreen(
                                 color = Color.Gray
                             )
                         }
-
                     } else {
-                        // Jika sudah upload tampilkan gambar
+                        // Display the uploaded image
                         AsyncImage(
                             model = selectedImage,
                             modifier = Modifier
@@ -255,9 +323,7 @@ fun TransferScreen(
                             contentScale = ContentScale.Fit
                         )
 
-
-
-                        // ❌ Tombol remove image
+                        // Remove Image Button
                         IconButton(
                             onClick = { selectedImage = null },
                             modifier = Modifier
@@ -278,8 +344,7 @@ fun TransferScreen(
 
                 Spacer(Modifier.height(28.dp))
 
-
-                // BUTTON TRANSFER + ANIMASI SCALE
+                // Transfer Button with Scale Animation
                 Button(
                     onClick = {
                         val nominal = jumlah.toIntOrNull() ?: run {
@@ -297,17 +362,17 @@ fun TransferScreen(
                             return@Button
                         }
 
-                        // 👌 simpan riwayat langsung melalui ViewModel
+                        // Submit transfer request
                         if (isMahasiswa) {
                             userViewModel.penarikan(
                                 nim = user.nim,
                                 jumlah = nominal,
                                 keterangan = keterangan,
                                 buktiTransfer = base64Image!!,
-                                riwayatViewModel = riwayatViewModel
+                                riwayatViewModel = riwayatViewModel,
+                                semester =selectedSemester!!
                             )
                         }
-
 
                         Toast.makeText(context, "Berhasil mengajukan transfer", Toast.LENGTH_SHORT).show()
                         navController.popBackStack()
@@ -317,9 +382,6 @@ fun TransferScreen(
                 ) {
                     Text("Transfer")
                 }
-
-
-
 
                 Spacer(Modifier.height(8.dp))
             }

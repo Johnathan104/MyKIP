@@ -103,7 +103,8 @@ class RiwayatDanaViewModel(
         jenis: String,
         goingIn:Boolean =false,
         buktiTransfer: String?,            // 🔥 tambahkan ini
-        userRole: String = "mahasiswa"
+        userRole: String = "mahasiswa",
+        semester: Int? = null
     ) {
         val status = if (userRole != "admin") "pending" else "approved"
 
@@ -115,7 +116,8 @@ class RiwayatDanaViewModel(
             "jenis" to jenis,
             "status" to status,
             "timestamp" to System.currentTimeMillis(),
-            "bukti_transfer" to buktiTransfer  // 🔥 field baru
+            "bukti_transfer" to buktiTransfer,
+            "semester" to semester,// 🔥 field baru
         )
 
 

@@ -64,6 +64,13 @@ fun RiwayatItem(item: RiwayatDana) {
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray
                 )
+                if(item.semester != null){
+                    Text(
+                        text = "Semester ${item.semester}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
             }
 
             // RIGHT SIDE — Amount

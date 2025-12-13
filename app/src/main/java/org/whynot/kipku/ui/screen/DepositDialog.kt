@@ -1,5 +1,6 @@
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -12,15 +13,23 @@ import androidx.compose.ui.unit.dp
 import java.text.NumberFormat
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DepositDialog(
     onDismiss: () -> Unit,
-    onSubmit: (Int, String) -> Unit
+    onSubmit: (Int, String, Int) -> Unit
 ) {
     var jumlahText by remember { mutableStateOf("") }
     var keterangan by remember { mutableStateOf("") }
     var isPressed by remember { mutableStateOf(false) }
-
+// Semester state
+    var selectedSemester by remember { mutableStateOf("") }
+    var semesterExpanded by remember { mutableStateOf(false) }
+    val semesterOptions = listOf(
+        "1", "2", "3",
+        "4", "5", "6",
+        "7", "8"
+    )
     val scale by animateFloatAsState(if (isPressed) 0.95f else 1f)
 
     // Fungsi format ribuan untuk tampilkan di UI
@@ -55,11 +64,45 @@ fun DepositDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                // ===== Semester Dropdown =====
+                ExposedDropdownMenuBox(
+                    expanded = semesterExpanded,
+                    onExpandedChange = { semesterExpanded = !semesterExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = selectedSemester,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Semester") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = semesterExpanded)
+                        },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = semesterExpanded,
+                        onDismissRequest = { semesterExpanded = false }
+                    ) {
+                        semesterOptions.forEach { semester ->
+                            DropdownMenuItem(
+                                text = { Text(semester) },
+                                onClick = {
+                                    selectedSemester = semester
+                                    semesterExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
-                onClick = { onSubmit(parseInput(jumlahText), keterangan) },
+                onClick = { onSubmit(parseInput(jumlahText, ), keterangan, parseInput(selectedSemester) ) },
                 modifier = Modifier
                     .scale(scale)
                     .padding(horizontal = 4.dp, vertical = 2.dp),

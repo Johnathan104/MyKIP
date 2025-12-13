@@ -15,6 +15,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import org.whynot.kipku.data.Mahasiswa
 
 class UserViewModel(
     private val repository: UserRepository,
@@ -166,7 +167,8 @@ class UserViewModel(
         nim: String,
         jumlah: Int,
         keterangan: String,
-        riwayatViewModel: RiwayatDanaViewModel
+        riwayatViewModel: RiwayatDanaViewModel,
+        semester: Int?= null
     ) {
         viewModelScope.launch {
             val admin = loggedInUser
@@ -189,13 +191,44 @@ class UserViewModel(
                 .document(target.id)
                 .update("balance", newBalance)
                 .await()
+            val currentMhsSnap = db.collection("mahasiswa")
+                .document(nim)
+                .get()
+                .await()
+
+            val currentMhs = currentMhsSnap.toObject(Mahasiswa::class.java) ?: return@launch
+//            KOMEN BAGIAN INI KALO MAU BISA TAMBAH PENYETORAN DI SEMESTER LEBIH AWAL
+            if (semester != null && semester < currentMhs.semester) {
+                uiState = UiState(
+                    isSuccess = false,
+                    message = "Semester tidak valid (tidak boleh mundur)"
+                )
+                return@launch
+            }
+
+            // update semester jika valid
+            if (semester != null && semester > currentMhs.semester) {
+                db.collection("mahasiswa")
+                    .document(nim)
+                    .update("semester", semester)
+                    .await()
+            }
+
+            if (semester !=null){
+                db.collection("mahasiswa")
+                    .document(nim)
+                    .update("semester", semester)
+                    .await()
+            }
             riwayatViewModel.tambahRiwayat(
                 nim,
                 jumlah,
                 keterangan,
                 "Transfer kepada Mahasiswa",
                 true,
-                loggedInUser!!.role
+                loggedInUser!!.role,
+                "admin",
+                semester
             )
 
             if (loggedInUser?.nim == nim) loadUserFromSession()
@@ -210,6 +243,7 @@ class UserViewModel(
         keterangan: String,
         riwayatViewModel: RiwayatDanaViewModel,
         buktiTransfer: String,
+        semester: Int? = null,
         onError: (String?) -> Unit = {}
     ) {
         viewModelScope.launch {
@@ -243,7 +277,9 @@ class UserViewModel(
 //                .update("balance", newBalance)
 //                .await()
 
-            riwayatViewModel.tambahRiwayat(nim, jumlah, keterangan, "Transfer oleh Mahasiswa", false,        buktiTransfer = buktiTransfer             // 🔥 kirim ke database
+            riwayatViewModel.tambahRiwayat(nim, jumlah, keterangan, "Transfer oleh Mahasiswa", false,
+                buktiTransfer = buktiTransfer,
+                semester= semester// 🔥 kirim ke database
             )
 
             val successMsg = "Transfer sejumlah Rp.$jumlah berhasil."

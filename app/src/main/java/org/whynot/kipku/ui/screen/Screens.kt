@@ -287,7 +287,7 @@ fun HomeScreen(
                                     )
 
                                     Text(
-                                        text = "Mahasiswa",
+                                        text = "Mahasiswa semester" + anak.semester,
                                         style = MaterialTheme.typography.bodyMedium.copy(color = Color.White)
                                     )
 
@@ -385,7 +385,7 @@ fun HomeScreen(
                                 )
 
                                 Text(
-                                    text = displayedRole,
+                                    text = displayedRole + " semester " + currentMahasiswa?.semester.toString(),
                                     style = MaterialTheme.typography.bodyMedium.copy(color = Color.White)
                                 )
 
@@ -745,7 +745,7 @@ fun FeatureGrid(
 
     val features = listOf(
         FeatureItem(
-            "Transfer",
+            "Catat Transaksi",
             R.drawable.ic_transfer,
             Color(0xFFFF3366),
             destination = "transfer"
@@ -964,6 +964,13 @@ fun RiwayatItemStyled(
                 fontSize = 13.sp,
                 color = Color.Gray
             )
+            if(r.semester != null){
+                Text(
+                    text = "pada semester: "+ r.semester,
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
+            }
         }
 
         Text(
